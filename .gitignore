@@ -1,0 +1,17 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+datos/*.duckdb
+datos/*.duckdb.wal
+datos/indice/
+.streamlit/secrets.toml
+.DS_Store
+.idea/
+.vscode/
+
+PLAN_*.md
+plan_*.md
+docs/plan/

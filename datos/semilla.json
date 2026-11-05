@@ -1,0 +1,77 @@
+{
+  "_nota": "Datos ficticios para la demo. Las coordenadas son aproximadas a colonias reales de Guadalajara. Contenido a cargo de Alejandro (tarea A1).",
+  "donantes": [
+    {
+      "id": "don-lupe",
+      "nombre": "Fonda Doña Lupe",
+      "ubicacion": {"lat": 20.6741, "lon": -103.3404, "direccion": "Mercado Libertad (San Juan de Dios), Guadalajara"},
+      "tipo_comercio": "fonda",
+      "hora_cierre": "18:00"
+    },
+    {
+      "id": "pan-espiga",
+      "nombre": "Panadería La Espiga",
+      "ubicacion": {"lat": 20.6718, "lon": -103.3700, "direccion": "Col. Americana, Guadalajara"},
+      "tipo_comercio": "panadería",
+      "hora_cierre": "21:00"
+    },
+    {
+      "id": "fru-guero",
+      "nombre": "Frutas y Verduras El Güero",
+      "ubicacion": {"lat": 20.6550, "lon": -103.3897, "direccion": "Mercado de Abastos, Guadalajara"},
+      "tipo_comercio": "puesto de mercado",
+      "hora_cierre": "17:00"
+    }
+  ],
+  "receptores": [
+    {
+      "id": "com-oblatos",
+      "nombre": "Comedor Comunitario Oblatos",
+      "ubicacion": {"lat": 20.6930, "lon": -103.3000, "direccion": "Col. Oblatos, Guadalajara"},
+      "tipos_aceptados": ["preparado", "panaderia", "fruta_verdura", "lacteo", "abarrote", "bebida"],
+      "capacidad_kg_dia": 60,
+      "tiene_refrigeracion": true,
+      "hora_apertura": "08:00",
+      "hora_cierre": "21:00",
+      "personas_atendidas": 80
+    },
+    {
+      "id": "casa-sanpedro",
+      "nombre": "Casa Hogar San Pedro",
+      "ubicacion": {"lat": 20.6406, "lon": -103.3115, "direccion": "Centro, San Pedro Tlaquepaque"},
+      "tipos_aceptados": ["preparado", "panaderia", "fruta_verdura", "abarrote"],
+      "capacidad_kg_dia": 30,
+      "tiene_refrigeracion": false,
+      "hora_apertura": "07:00",
+      "hora_cierre": "20:00",
+      "personas_atendidas": 35
+    },
+    {
+      "id": "alb-juntas",
+      "nombre": "Albergue Las Juntas",
+      "ubicacion": {"lat": 20.6157, "lon": -103.3468, "direccion": "Las Juntas, San Pedro Tlaquepaque"},
+      "tipos_aceptados": ["preparado", "panaderia", "fruta_verdura", "lacteo", "carne_pescado", "abarrote", "bebida", "otro"],
+      "capacidad_kg_dia": 40,
+      "tiene_refrigeracion": true,
+      "hora_apertura": "09:00",
+      "hora_cierre": "22:00",
+      "personas_atendidas": 50
+    }
+  ],
+  "recolectores": [
+    {
+      "id": "rec-ivan",
+      "nombre": "Iván Ramírez",
+      "ubicacion": {"lat": 20.6767, "lon": -103.3475, "direccion": "Centro, Guadalajara"},
+      "zona": "Centro",
+      "transporte": "moto"
+    },
+    {
+      "id": "rec-mariana",
+      "nombre": "Mariana Torres",
+      "ubicacion": {"lat": 20.6400, "lon": -103.3100, "direccion": "San Pedro Tlaquepaque"},
+      "zona": "Tlaquepaque",
+      "transporte": "auto"
+    }
+  ]
+}
