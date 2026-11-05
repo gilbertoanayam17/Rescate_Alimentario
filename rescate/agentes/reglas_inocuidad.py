@@ -10,6 +10,7 @@ relajarlo.
 Citas: de la NOM-251-SSA1-2009 solo se citan los numerales verificados en el texto oficial
 (5.5.2, 7.3.2 y 7.3.3). Los umbrales de tiempo son criterios internos del proyecto.
 """
+
 from __future__ import annotations
 
 import re
@@ -100,7 +101,9 @@ class ReglaInocuidad(ABC):
         self._siguiente = siguiente
         return siguiente
 
-    def evaluar(self, donativo: Donativo, ahora: datetime, hallazgos: list[Hallazgo] | None = None) -> list[Hallazgo]:
+    def evaluar(
+        self, donativo: Donativo, ahora: datetime, hallazgos: list[Hallazgo] | None = None
+    ) -> list[Hallazgo]:
         hallazgos = [] if hallazgos is None else hallazgos
         hallazgo = self.revisar(donativo, ahora)
         if hallazgo is not None:
@@ -121,9 +124,18 @@ class ReglaSenalesDeterioro(ReglaInocuidad):
 
     codigo = "CI-01"
     PATRONES = [
-        r"huele\s+(mal|feo|raro|agrio)", r"olor\s+(raro|feo|agrio)", r"sabe\s+(raro|feo|agrio)",
-        r"\bmoho", r"\bmohos[oa]s?\b", r"\bagri[oa]s?\b", r"\bpodrid[oa]s?\b", r"\branci[oa]s?\b",
-        r"\bcaducad[oa]s?\b", r"\bvencid[oa]s?\b", r"\bbabos[oa]s?\b", r"ech(ado|ada|ó|o)\s+a\s+perder",
+        r"huele\s+(mal|feo|raro|agrio)",
+        r"olor\s+(raro|feo|agrio)",
+        r"sabe\s+(raro|feo|agrio)",
+        r"\bmoho",
+        r"\bmohos[oa]s?\b",
+        r"\bagri[oa]s?\b",
+        r"\bpodrid[oa]s?\b",
+        r"\branci[oa]s?\b",
+        r"\bcaducad[oa]s?\b",
+        r"\bvencid[oa]s?\b",
+        r"\bbabos[oa]s?\b",
+        r"ech(ado|ada|ó|o)\s+a\s+perder",
     ]
 
     def revisar(self, donativo: Donativo, ahora: datetime) -> Hallazgo | None:
@@ -144,8 +156,12 @@ class ReglaEmpaque(ReglaInocuidad):
 
     codigo = "CI-07"
     PATRONES = [
-        r"\babiert[oa]s?\b", r"\babollad[oa]s?\b", r"\binflad[oa]s?\b", r"sin\s+etiqueta",
-        r"\bgolpead[oa]s?\b", r"\boxidad[oa]s?\b",
+        r"\babiert[oa]s?\b",
+        r"\babollad[oa]s?\b",
+        r"\binflad[oa]s?\b",
+        r"sin\s+etiqueta",
+        r"\bgolpead[oa]s?\b",
+        r"\boxidad[oa]s?\b",
     ]
 
     def revisar(self, donativo: Donativo, ahora: datetime) -> Hallazgo | None:
@@ -208,7 +224,9 @@ class ReglaOrigenDesconocido(ReglaInocuidad):
             return None
         sin_conservacion = [a for a in perecederos if a.conservacion == Conservacion.DESCONOCIDA]
         sin_hora = donativo.hora_preparacion is None
-        faltas = (["cuándo se preparó"] if sin_hora else []) + (["cómo se ha conservado"] if sin_conservacion else [])
+        faltas = (["cuándo se preparó"] if sin_hora else []) + (
+            ["cómo se ha conservado"] if sin_conservacion else []
+        )
         if not faltas:
             return None
         afectados = perecederos if sin_hora else sin_conservacion
@@ -231,7 +249,8 @@ class ReglaCadenaFrio(ReglaInocuidad):
 
     def revisar(self, donativo: Donativo, ahora: datetime) -> Hallazgo | None:
         en_frio = [
-            a for a in donativo.alimentos
+            a
+            for a in donativo.alimentos
             if a.tipo in {TipoAlimento.LACTEO, TipoAlimento.CARNE_PESCADO} or a.conservacion in self.FRIOS
         ]
         if not en_frio:
@@ -281,7 +300,10 @@ class ReglaVidaUtil(ReglaInocuidad):
 
     @classmethod
     def vida_base(cls, alimento: Alimento) -> float:
-        if _es_perecedero(alimento) and alimento.conservacion in {Conservacion.AMBIENTE, Conservacion.DESCONOCIDA}:
+        if _es_perecedero(alimento) and alimento.conservacion in {
+            Conservacion.AMBIENTE,
+            Conservacion.DESCONOCIDA,
+        }:
             return HORAS_SIN_CONTROL
         if alimento.tipo == TipoAlimento.PREPARADO:
             return cls.VIDA_PREPARADO[alimento.conservacion]

@@ -7,6 +7,7 @@ Uso:
 
 DUEÑO: Gilberto (tarea G3).
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -21,9 +22,13 @@ from rescate.rag.base_conocimiento import BaseConocimientoVectorial  # noqa: E40
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--forzar", action="store_true", help="reconstruye el índice aunque no haya cambios")
-    parser.add_argument("--buscar", default="comida caliente", help="consulta de prueba (por defecto: comida caliente)")
+    parser.add_argument(
+        "--buscar", default="comida caliente", help="consulta de prueba (por defecto: comida caliente)"
+    )
     args = parser.parse_args()
 
     config = cargar_configuracion()
@@ -39,7 +44,9 @@ def main() -> None:
         sys.exit(f"No se pudo indexar: {e}\n¿Está corriendo Ollama? Revisa con: ollama list")
 
     accion = "Indexé" if base.reconstruido else "Reusé el índice de"
-    print(f"{accion} {len(base.fragmentos)} fragmentos con {embeddings} ({base.motor}) en {config.ruta_indice}")
+    print(
+        f"{accion} {len(base.fragmentos)} fragmentos con {embeddings} ({base.motor}) en {config.ruta_indice}"
+    )
     print(f'\nBúsqueda de prueba: "{args.buscar}"')
     for f in base.buscar(args.buscar, k=4):
         print(f"  {f.puntaje:.3f}  {f.seccion}  [{f.fuente}]")

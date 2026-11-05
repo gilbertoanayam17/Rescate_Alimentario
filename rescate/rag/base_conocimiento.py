@@ -11,6 +11,7 @@ cambia su huella (contenido de los `.md` + cliente LLM + modelo de embeddings).
 
 El contenedor siempre llama a `crear_base_conocimiento`; no cambies su firma.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -139,7 +140,13 @@ class BaseConocimientoVectorial(BaseConocimiento):
         for archivo in self._archivos():
             sha.update(archivo.name.encode())
             sha.update(archivo.read_bytes())
-        for parte in (type(self.llm).__name__, self.modelo_embeddings, self.prefijo_documento, self.motor, VERSION_INDICE):
+        for parte in (
+            type(self.llm).__name__,
+            self.modelo_embeddings,
+            self.prefijo_documento,
+            self.motor,
+            VERSION_INDICE,
+        ):
             sha.update(b"\0" + parte.encode())
         return sha.hexdigest()
 
@@ -153,7 +160,9 @@ class BaseConocimientoVectorial(BaseConocimiento):
 
     def _construir(self) -> None:
         self.fragmentos = [
-            f for archivo in self._archivos() for f in fragmentar(archivo.read_text(encoding="utf-8"), archivo.name)
+            f
+            for archivo in self._archivos()
+            for f in fragmentar(archivo.read_text(encoding="utf-8"), archivo.name)
         ]
         if not self.fragmentos:
             self._vectores = np.zeros((0, 0), dtype="float32")
@@ -170,7 +179,9 @@ class BaseConocimientoVectorial(BaseConocimiento):
     def _guardar(self, huella: str) -> None:
         self.ruta_indice.mkdir(parents=True, exist_ok=True)
         (self.ruta_indice / "fragmentos.json").write_text(
-            json.dumps([f.model_dump(exclude={"puntaje"}) for f in self.fragmentos], ensure_ascii=False, indent=1),
+            json.dumps(
+                [f.model_dump(exclude={"puntaje"}) for f in self.fragmentos], ensure_ascii=False, indent=1
+            ),
             encoding="utf-8",
         )
         if self._indice is not None:
@@ -204,7 +215,9 @@ class BaseConocimientoVectorial(BaseConocimiento):
         k = min(k, len(self.fragmentos))
         if k <= 0 or not consulta.strip():
             return []
-        vector = _normalizar(np.array(self.llm.embeber([f"{self.prefijo_consulta}{consulta}"]), dtype="float32"))
+        vector = _normalizar(
+            np.array(self.llm.embeber([f"{self.prefijo_consulta}{consulta}"]), dtype="float32")
+        )
         if self._indice is not None:
             puntajes, indices = self._indice.search(vector, k)
             pares = zip(indices[0].tolist(), puntajes[0].tolist())
@@ -212,17 +225,19 @@ class BaseConocimientoVectorial(BaseConocimiento):
             similitudes = self._vectores @ vector[0]
             orden = np.argsort(-similitudes)[:k]
             pares = ((int(i), float(similitudes[i])) for i in orden)
-        return [
-            self.fragmentos[i].model_copy(update={"puntaje": round(p, 4)}) for i, p in pares if i >= 0
-        ]
+        return [self.fragmentos[i].model_copy(update={"puntaje": round(p, 4)}) for i, p in pares if i >= 0]
 
     def disponible(self) -> bool:
         return bool(self.fragmentos)
 
     @classmethod
-    def desde_config(cls, config: "Configuracion", llm: ClienteLLM, forzar: bool = False) -> "BaseConocimientoVectorial":
+    def desde_config(
+        cls, config: "Configuracion", llm: ClienteLLM, forzar: bool = False
+    ) -> "BaseConocimientoVectorial":
         prefijos = PREFIJOS_NOMIC if "nomic" in config.modelo_embeddings else ("", "")
-        return cls(config.ruta_conocimiento, config.ruta_indice, llm, config.modelo_embeddings, prefijos, forzar)
+        return cls(
+            config.ruta_conocimiento, config.ruta_indice, llm, config.modelo_embeddings, prefijos, forzar
+        )
 
 
 def crear_base_conocimiento(config: "Configuracion", llm: ClienteLLM) -> BaseConocimiento:

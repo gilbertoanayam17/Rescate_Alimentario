@@ -1,4 +1,5 @@
 """Pruebas del RAG (base de conocimiento vectorial) con los embeddings por palabras del LLM falso."""
+
 from __future__ import annotations
 
 import shutil
@@ -69,7 +70,9 @@ def carpeta(tmp_path) -> Path:
 
 
 def base(carpeta: Path, llm=None, **kwargs) -> BaseConocimientoVectorial:
-    return BaseConocimientoVectorial(carpeta, carpeta.parent / "indice", llm or ClienteLLMFalso(), "falso", **kwargs)
+    return BaseConocimientoVectorial(
+        carpeta, carpeta.parent / "indice", llm or ClienteLLMFalso(), "falso", **kwargs
+    )
 
 
 def test_los_archivos_de_conocimiento_tienen_lo_que_pide_el_plan():
@@ -95,7 +98,10 @@ def test_fragmentar_por_encabezados_y_parrafos_largos():
 
 def test_buscar_refrigeracion_devuelve_primero_el_numeral_que_la_menciona(corpus_chico):
     resultados = base(corpus_chico).buscar("refrigeración 7 °C", k=4)
-    assert resultados[0].seccion == "NOM-251-SSA1-2009, numeral 5.5.2: temperatura de los equipos de refrigeración"
+    assert (
+        resultados[0].seccion
+        == "NOM-251-SSA1-2009, numeral 5.5.2: temperatura de los equipos de refrigeración"
+    )
     assert resultados[0].fuente == "prueba.md"
     assert [r.puntaje for r in resultados] == sorted((r.puntaje for r in resultados), reverse=True)
     assert len(resultados) == 3  # k se recorta al número de fragmentos
