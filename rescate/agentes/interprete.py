@@ -12,6 +12,7 @@ Aclaraciones: la página del donante vuelve a llamar con
 `MAX_ACLARACIONES` rondas ya no se pregunta: se publica con lo que haya y la Inocuidad
 es conservadora con lo desconocido.
 """
+
 from __future__ import annotations
 
 import re
@@ -34,7 +35,9 @@ from rescate.llm.cliente import ClienteLLM, ErrorLLM
 
 MARCA_ACLARACION = "\nAclaración del donante: "
 MAX_ACLARACIONES = 2
-PREGUNTA_SIN_ALIMENTOS = "¿Qué alimentos te sobraron y cuánto de cada uno? Por ejemplo: 15 bolillos y 3 kg de arroz."
+PREGUNTA_SIN_ALIMENTOS = (
+    "¿Qué alimentos te sobraron y cuánto de cada uno? Por ejemplo: 15 bolillos y 3 kg de arroz."
+)
 
 
 # --------------------------------------------------------------- esquemas del LLM
@@ -90,7 +93,9 @@ ha conservado, anótalo en datos_faltantes y escribe UNA pregunta corta y amable
 México, que pida justo eso.
 10. Si no hay ningún alimento con cantidad, pregunta qué le sobró y cuánto.
 11. Si el mensaje trae líneas "Aclaración del donante:", son respuestas a tus preguntas: \
-úsalas para completar los datos del mismo donativo.
+úsalas para completar los datos del mismo donativo. Lo que diga una aclaración sobre la hora o \
+la conservación aplica solo a los alimentos por los que se preguntó; a los demás déjales lo que ya \
+tenían.
 
 Ejemplo 1
 Hora actual: 18:30
@@ -132,38 +137,128 @@ refrigerador.", "alimentos": [{"nombre": "pollo en mole", "cantidad": 2, "unidad
 """
 
 PALABRAS_POR_TIPO: dict[TipoAlimento, list[str]] = {
-    TipoAlimento.PANADERIA: ["pan", "bolillo", "concha", "tortilla", "telera", "dona", "galleta", "birote", "pastel"],
+    TipoAlimento.PANADERIA: [
+        "pan",
+        "bolillo",
+        "concha",
+        "tortilla",
+        "telera",
+        "dona",
+        "galleta",
+        "birote",
+        "pastel",
+    ],
     TipoAlimento.PREPARADO: [
-        "guisado", "arroz", "frijoles", "sopa", "caldo", "tamal", "mole", "pozole", "comida",
-        "picadillo", "tinga", "chilaquiles", "torta", "taco", "pollo en", "carne en", "lonche",
+        "guisado",
+        "arroz",
+        "frijoles",
+        "sopa",
+        "caldo",
+        "tamal",
+        "mole",
+        "pozole",
+        "comida",
+        "picadillo",
+        "tinga",
+        "chilaquiles",
+        "torta",
+        "taco",
+        "pollo en",
+        "carne en",
+        "lonche",
     ],
     TipoAlimento.FRUTA_VERDURA: [
-        "fruta", "manzana", "naranja", "platano", "plátano", "jitomate", "tomate", "papa", "zanahoria",
-        "verdura", "lechuga", "aguacate", "mango", "papaya", "sandia", "sandía", "piña", "cebolla",
+        "fruta",
+        "manzana",
+        "naranja",
+        "platano",
+        "plátano",
+        "jitomate",
+        "tomate",
+        "papa",
+        "zanahoria",
+        "verdura",
+        "lechuga",
+        "aguacate",
+        "mango",
+        "papaya",
+        "sandia",
+        "sandía",
+        "piña",
+        "cebolla",
     ],
     TipoAlimento.LACTEO: ["leche", "queso", "yogur", "crema", "jocoque"],
-    TipoAlimento.CARNE_PESCADO: ["carne cruda", "pollo crudo", "pescado", "res", "cerdo", "camaron", "camarón"],
-    TipoAlimento.ABARROTE: ["lata", "enlatado", "atun", "atún", "frijol en bolsa", "pasta", "harina", "azucar", "azúcar"],
+    TipoAlimento.CARNE_PESCADO: [
+        "carne cruda",
+        "pollo crudo",
+        "pescado",
+        "res",
+        "cerdo",
+        "camaron",
+        "camarón",
+    ],
+    TipoAlimento.ABARROTE: [
+        "lata",
+        "enlatado",
+        "atun",
+        "atún",
+        "frijol en bolsa",
+        "pasta",
+        "harina",
+        "azucar",
+        "azúcar",
+    ],
     TipoAlimento.BEBIDA: ["agua", "refresco", "jugo", "atole"],
 }
 
 UNIDADES: dict[str, str] = {
-    "kg": "kg", "kilo": "kg", "kilos": "kg", "kilogramo": "kg", "kilogramos": "kg",
-    "g": "g", "gr": "g", "gramos": "g",
-    "pieza": "pieza", "piezas": "pieza", "pza": "pieza", "pzas": "pieza",
-    "porcion": "porcion", "porción": "porcion", "porciones": "porcion",
-    "orden": "porcion", "ordenes": "porcion", "órdenes": "porcion",
-    "litro": "litro", "litros": "litro", "lt": "litro", "lts": "litro", "l": "litro",
-    "charola": "charola", "charolas": "charola", "bolsa": "bolsa", "bolsas": "bolsa",
-    "caja": "caja", "cajas": "caja",
+    "kg": "kg",
+    "kilo": "kg",
+    "kilos": "kg",
+    "kilogramo": "kg",
+    "kilogramos": "kg",
+    "g": "g",
+    "gr": "g",
+    "gramos": "g",
+    "pieza": "pieza",
+    "piezas": "pieza",
+    "pza": "pieza",
+    "pzas": "pieza",
+    "porcion": "porcion",
+    "porción": "porcion",
+    "porciones": "porcion",
+    "orden": "porcion",
+    "ordenes": "porcion",
+    "órdenes": "porcion",
+    "litro": "litro",
+    "litros": "litro",
+    "lt": "litro",
+    "lts": "litro",
+    "l": "litro",
+    "charola": "charola",
+    "charolas": "charola",
+    "bolsa": "bolsa",
+    "bolsas": "bolsa",
+    "caja": "caja",
+    "cajas": "caja",
 }
 
 #: kg aproximados por unidad; "pieza" depende del tipo de alimento.
-KG_POR_UNIDAD = {"kg": 1.0, "g": 0.001, "porcion": 0.35, "litro": 1.0, "charola": 2.0, "bolsa": 1.0, "caja": 5.0}
+KG_POR_UNIDAD = {
+    "kg": 1.0,
+    "g": 0.001,
+    "porcion": 0.35,
+    "litro": 1.0,
+    "charola": 2.0,
+    "bolsa": 1.0,
+    "caja": 5.0,
+}
 KG_POR_PIEZA = {TipoAlimento.PANADERIA: 0.07, TipoAlimento.FRUTA_VERDURA: 0.2}
 
 _PATRON = re.compile(
-    r"(\d+(?:[.,]\d+)?)\s*(" + "|".join(sorted(map(re.escape, UNIDADES), key=len, reverse=True)) + r")?\.?\s+(?:de\s+)?(.+)",
+    r"(\d+(?:[.,]\d+)?)\s*("
+    + "|".join(sorted(map(re.escape, UNIDADES), key=len, reverse=True))
+    + r")?\.?\s+(?:de\s+)?(.+)",
     re.IGNORECASE,
 )
 
@@ -262,7 +357,16 @@ def _describir(alimento: Alimento) -> str:
 COMERCIOS_QUE_COCINAN = ("fonda", "cocina", "restaurante", "comedor", "taquer", "loncher")
 GUARNICIONES = ("arroz", "frijol", "pasta", "sopa", "espagueti", "lenteja", "garbanzo")
 SENALES_DE_CRUDO = (
-    "crud", "bolsa", "cerrad", "empaquet", "paquete", "sellad", "lata", "enlatad", "sin abrir", "sin cocer",
+    "crud",
+    "bolsa",
+    "cerrad",
+    "empaquet",
+    "paquete",
+    "sellad",
+    "lata",
+    "enlatad",
+    "sin abrir",
+    "sin cocer",
 )
 
 
@@ -319,7 +423,11 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
             )
         except ErrorLLM as e:
             self._anotar(
-                TipoEntradaBitacora.ERROR, "El LLM no respondió; uso reglas.", did, paso=2, datos={"error": str(e)}
+                TipoEntradaBitacora.ERROR,
+                "El LLM no respondió; uso reglas.",
+                did,
+                paso=2,
+                datos={"error": str(e)},
             )
             resultado = self._interpretar_con_reglas(entrada.texto)
             self._anotar(
@@ -344,12 +452,16 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
         )
         if resultado.completo:
             kg = round(sum(a.kg_estimados for a in resultado.alimentos), 2)
-            resumen = f"Donativo completo: {len(resultado.alimentos)} alimento(s), {kg:g} kg estimados por código."
+            resumen = (
+                f"Donativo completo: {len(resultado.alimentos)} alimento(s), {kg:g} kg estimados por código."
+            )
             if aclaraciones >= MAX_ACLARACIONES and respuesta.datos_faltantes:
                 resumen += " Ya van dos aclaraciones; publico con lo que hay y la Inocuidad decide con lo desconocido."
         else:
             resumen = f"Pregunto: {' '.join(resultado.preguntas)}"
-        self._anotar(TipoEntradaBitacora.RESULTADO, resumen, did, paso=5, datos=resultado.model_dump(mode="json"))
+        self._anotar(
+            TipoEntradaBitacora.RESULTADO, resumen, did, paso=5, datos=resultado.model_dump(mode="json")
+        )
         return resultado
 
     @staticmethod
@@ -362,7 +474,11 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
         )
 
     def _postprocesar(
-        self, respuesta: InterpretacionLLM, entrada: SolicitudInterpretacion, momento: datetime, aclaraciones: int
+        self,
+        respuesta: InterpretacionLLM,
+        entrada: SolicitudInterpretacion,
+        momento: datetime,
+        aclaraciones: int,
     ) -> ResultadoInterpretacion:
         """Lo que calcula el código, no el LLM: kilos, horas y si ya está completo."""
         alimentos: list[Alimento] = []
@@ -443,6 +559,8 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
         if not alimentos:
             return ResultadoInterpretacion(
                 completo=False,
-                preguntas=["¿Qué alimentos te sobraron y cuánto de cada uno? Por ejemplo: 15 bolillos y 3 kg de arroz."],
+                preguntas=[
+                    "¿Qué alimentos te sobraron y cuánto de cada uno? Por ejemplo: 15 bolillos y 3 kg de arroz."
+                ],
             )
         return ResultadoInterpretacion(completo=True, alimentos=alimentos)

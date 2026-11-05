@@ -1,4 +1,5 @@
 """Pruebas del Agente Intérprete (CAR-01) con el LLM falso y un reloj fijo."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -28,7 +29,12 @@ def bitacora() -> Bitacora:
 
 @pytest.fixture
 def donante() -> Donante:
-    return Donante(id="don-prueba", nombre="Fonda de Prueba", ubicacion=Ubicacion(lat=20.67, lon=-103.34), hora_cierre="18:00")
+    return Donante(
+        id="don-prueba",
+        nombre="Fonda de Prueba",
+        ubicacion=Ubicacion(lat=20.67, lon=-103.34),
+        hora_cierre="18:00",
+    )
 
 
 @pytest.fixture
@@ -47,7 +53,9 @@ def alimento(nombre, cantidad, unidad, tipo, conservacion="desconocida", observa
     }
 
 
-def respuesta(alimentos, hora=None, recoger=None, faltantes=(), pregunta=None, razonamiento="Entendí el mensaje."):
+def respuesta(
+    alimentos, hora=None, recoger=None, faltantes=(), pregunta=None, razonamiento="Entendí el mensaje."
+):
     return {
         "razonamiento": razonamiento,
         "alimentos": alimentos,
@@ -72,7 +80,9 @@ def solicitud(texto, donante):
 def test_frase_completa_calcula_kilos_en_codigo(agente, llm_falso, donante):
     llm_falso.programar(
         "InterpretacionLLM",
-        respuesta([alimento("bolillos", 15, "pieza", "panaderia"), alimento("manzana", 2, "kg", "fruta_verdura")]),
+        respuesta(
+            [alimento("bolillos", 15, "pieza", "panaderia"), alimento("manzana", 2, "kg", "fruta_verdura")]
+        ),
     )
     r = agente.ejecutar(solicitud("15 bolillos y 2 kg de manzana", donante))
     assert r.completo and r.preguntas == []
@@ -144,7 +154,9 @@ def test_hace_una_hora_lo_calcula_el_codigo(agente, llm_falso, donante):
         "InterpretacionLLM",
         respuesta([alimento("pollo en mole", 2, "charola", "preparado", "refrigerado")], hora="15:00"),
     )
-    r = agente.ejecutar(solicitud(MOLE + MARCA_ACLARACION + "lo hice hace una hora y lo tengo en el refri", donante))
+    r = agente.ejecutar(
+        solicitud(MOLE + MARCA_ACLARACION + "lo hice hace una hora y lo tengo en el refri", donante)
+    )
     assert r.completo and r.hora_preparacion == datetime(2026, 11, 5, 16, 0)
 
 
@@ -164,7 +176,9 @@ def test_sin_alimentos_pregunta_que_le_sobro(agente, llm_falso, donante):
 def test_cantidades_no_positivas_se_descartan(agente, llm_falso, donante):
     llm_falso.programar(
         "InterpretacionLLM",
-        respuesta([alimento("conchas", 0, "pieza", "panaderia"), alimento("bolillos", 10, "pieza", "panaderia")]),
+        respuesta(
+            [alimento("conchas", 0, "pieza", "panaderia"), alimento("bolillos", 10, "pieza", "panaderia")]
+        ),
     )
     r = agente.ejecutar(solicitud("10 bolillos", donante))
     assert [a.nombre for a in r.alimentos] == ["bolillos"]
@@ -213,8 +227,12 @@ def test_arroz_de_fonda_marcado_como_abarrote_se_trata_como_preparado(agente, ll
         ("arroz", "", "panadería"),
     ],
 )
-def test_arroz_crudo_o_fuera_de_fonda_sigue_como_abarrote(agente, llm_falso, donante, nombre, observaciones, tipo_comercio):
+def test_arroz_crudo_o_fuera_de_fonda_sigue_como_abarrote(
+    agente, llm_falso, donante, nombre, observaciones, tipo_comercio
+):
     donante.tipo_comercio = tipo_comercio
-    llm_falso.programar("InterpretacionLLM", respuesta([alimento(nombre, 2, "kg", "abarrote", observaciones=observaciones)]))
+    llm_falso.programar(
+        "InterpretacionLLM", respuesta([alimento(nombre, 2, "kg", "abarrote", observaciones=observaciones)])
+    )
     r = agente.ejecutar(solicitud(f"2 kg de {nombre} {observaciones}", donante))
     assert r.completo and r.alimentos[0].tipo == TipoAlimento.ABARROTE
