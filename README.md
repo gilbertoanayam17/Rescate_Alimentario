@@ -1,5 +1,7 @@
 # Rescate Alimentario
 
+[![pruebas](https://github.com/gilbertoanayam17/Rescate_Alimentario/actions/workflows/pruebas.yml/badge.svg)](https://github.com/gilbertoanayam17/Rescate_Alimentario/actions/workflows/pruebas.yml)
+
 Del sobrante de la fonda al comedor comunitario, con agentes de IA que corren en local.
 
 Rescate Alimentario conecta a pequeños comercios de alimentos (fondas, panaderías, puestos de
@@ -77,13 +79,18 @@ en caché. Un índice generado con embeddings simulados se reconstruye al usar e
 
 ```powershell
 python -m pytest
+python scripts/evaluar_interprete.py           # calidad del Intérprete con el LLM de .env
+python scripts/evaluar_interprete.py --reglas  # línea base: solo reglas, sin LLM
 ```
 
 Verificación local del 5 de noviembre de 2026:
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite con cliente simulado | 145 pruebas aprobadas; incluye `test_flujo_basico.py` |
+| Suite con cliente simulado | 171 pruebas aprobadas; incluye `test_flujo_basico.py` |
+| Inocuidad | 51 casos en `tests/casos_inocuidad.json`: los 35 no aptos se rechazan, ninguno sale aprobado (meta de la visión: 30 no aptos) |
+| Intérprete con `gemma4:e4b` | 20 frases de `tests/frases_interprete.json`: 160 de 160 campos correctos (100 %, igual en 3 corridas; meta de la visión: 90 %). Las reglas de respaldo solas logran 73 %. Es una muestra chica y 3 frases se parecen a los ejemplos del prompt |
+| Guion en la interfaz con `gemma4:e4b` | Escenas 2 a 6 de punta a punta con AppTest y Ollama real: aclaración, no apto, rechazo y reasignación, recolección, entrega y coordinador |
 | AppTest de Streamlit | Cuatro roles; rechazo con motivo, reasignación, aceptación, recolección, entrega, perfiles, altas, métricas, historial y filtros |
 | Restricciones del asignador | Un no apto no se asigna; un id inventado o un receptor existente fuera del top 3 activa el respaldo |
 | Ollama real, por la fachada de servicios | Nueve consultas con `gemma4:26b`, sin errores ni respaldo: entrega tras reasignación, leche no apta y aclaración de pollo refrigerado |

@@ -1,0 +1,134 @@
+{
+  "_nota": "Frases de evaluación del Agente Intérprete (scripts/evaluar_interprete.py). Hora actual fija: 17:00. 'nombre' es una lista de textos aceptados (sin acentos ni mayúsculas); tipo y conservacion pueden ser un valor o una lista de valores aceptados; un campo ausente no se evalúa. hora_preparacion es HH:MM o null.",
+  "hora_actual": "17:00",
+  "frases": [
+    {
+      "texto": "Me sobraron 15 bolillos y 5 kg de jitomate",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["bolillo"], "cantidad": 15, "unidad": "pieza", "tipo": "panaderia"},
+        {"nombre": ["jitomate", "tomate"], "cantidad": 5, "unidad": "kg", "tipo": "fruta_verdura"}
+      ]}
+    },
+    {
+      "texto": "15 bolis y kilo y medio de jitomate",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["bolillo", "boli"], "cantidad": 15, "unidad": "pieza", "tipo": "panaderia"},
+        {"nombre": ["jitomate", "tomate"], "cantidad": 1.5, "unidad": "kg", "tipo": "fruta_verdura"}
+      ]}
+    },
+    {
+      "texto": "una docena de conchas",
+      "comercio": "panadería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["concha"], "cantidad": 12, "unidad": "pieza", "tipo": "panaderia"}
+      ]}
+    },
+    {
+      "texto": "Tengo 2 charolas de pollo en mole",
+      "esperado": {"completo": false, "alimentos": [
+        {"nombre": ["mole"], "cantidad": 2, "unidad": "charola", "tipo": "preparado", "conservacion": "desconocida"}
+      ], "hora_preparacion": null}
+    },
+    {
+      "texto": "Tengo 2 charolas de pollo en mole\nAclaración del donante: lo hice a las 2 y está en el refri",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["mole"], "cantidad": 2, "unidad": "charola", "tipo": "preparado", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "14:00"}
+    },
+    {
+      "texto": "3 kg de arroz que hice hace 2 horas, lo tengo en el refri",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["arroz"], "cantidad": 3, "unidad": "kg", "tipo": "preparado", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "15:00"}
+    },
+    {
+      "texto": "medio kilo de queso fresco en el refri desde las 10",
+      "comercio": "cremería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["queso"], "cantidad": 0.5, "unidad": "kg", "tipo": "lacteo", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "10:00"}
+    },
+    {
+      "texto": "10 latas de atún cerradas",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["atun"], "cantidad": 10, "unidad": ["pieza", "caja"], "tipo": "abarrote"}
+      ]}
+    },
+    {
+      "texto": "4 litros de agua de jamaica en el refri, la hice a las 12",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["jamaica"], "cantidad": 4, "unidad": "litro", "tipo": ["bebida", "preparado"], "conservacion": "refrigerado"}
+      ], "hora_preparacion": "12:00"}
+    },
+    {
+      "texto": "5 porciones de pozole calientito, lo hice a las 3",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["pozole"], "cantidad": 5, "unidad": "porcion", "tipo": "preparado", "conservacion": "caliente"}
+      ], "hora_preparacion": "15:00"}
+    },
+    {
+      "texto": "hola, buenas tardes",
+      "esperado": {"completo": false, "alimentos": []}
+    },
+    {
+      "texto": "Me quedaron 3 litros de leche que dejé afuera desde la mañana",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["leche"], "cantidad": 3, "unidad": "litro", "tipo": "lacteo", "conservacion": "ambiente"}
+      ], "hora_preparacion": "08:00"}
+    },
+    {
+      "texto": "una caja de manzanas y 3 kg de plátano",
+      "comercio": "puesto de mercado",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["manzana"], "cantidad": 1, "unidad": "caja", "tipo": "fruta_verdura"},
+        {"nombre": ["platano"], "cantidad": 3, "unidad": "kg", "tipo": "fruta_verdura"}
+      ]}
+    },
+    {
+      "texto": "6 tortas de jamón que hice hace una hora, están en el mostrador",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["torta"], "cantidad": 6, "unidad": "pieza", "tipo": "preparado", "conservacion": "ambiente"}
+      ], "hora_preparacion": "16:00"}
+    },
+    {
+      "texto": "2 kg de pollo crudo en el refri desde las 8",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["pollo"], "cantidad": 2, "unidad": "kg", "tipo": "carne_pescado", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "08:00"}
+    },
+    {
+      "texto": "20 tortillas y medio kilo de frijoles de olla calientitos que hice hace media hora",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["tortilla"], "cantidad": 20, "unidad": "pieza", "tipo": "panaderia"},
+        {"nombre": ["frijol"], "cantidad": 0.5, "unidad": "kg", "tipo": "preparado", "conservacion": "caliente"}
+      ], "hora_preparacion": "16:30"}
+    },
+    {
+      "texto": "tengo 8 tamales de rajas en la vaporera calientitos, los hice en la mañana",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["tamal"], "cantidad": 8, "unidad": "pieza", "tipo": "preparado", "conservacion": "caliente"}
+      ]}
+    },
+    {
+      "texto": "unas 30 piezas de pan dulce de ayer",
+      "comercio": "panadería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["pan"], "cantidad": 30, "unidad": "pieza", "tipo": "panaderia"}
+      ]}
+    },
+    {
+      "texto": "1 kg de queso panela",
+      "comercio": "cremería",
+      "esperado": {"completo": false, "alimentos": [
+        {"nombre": ["panela", "queso"], "cantidad": 1, "unidad": "kg", "tipo": "lacteo", "conservacion": "desconocida"}
+      ]}
+    },
+    {
+      "texto": "2 bolsas de pan de caja cerradas y 1 litro de yogur en el refri desde ayer a las 6 de la tarde",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["pan"], "cantidad": 2, "unidad": "bolsa", "tipo": ["panaderia", "abarrote"]},
+        {"nombre": ["yogur", "yoghurt", "yogurt"], "cantidad": 1, "unidad": "litro", "tipo": "lacteo", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "18:00"}
+    }
+  ]
+}

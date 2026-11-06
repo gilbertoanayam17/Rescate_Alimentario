@@ -56,8 +56,14 @@ def donativo_de(caso: dict) -> Donativo:
 
 def test_hay_suficientes_casos():
     esperados = [c["esperado"] for c in CASOS]
-    assert esperados.count("no_apto") >= 8
+    assert esperados.count("no_apto") >= 30  # meta de la visión: 30 no aptos, ninguno aprobado
     assert len(esperados) - esperados.count("no_apto") >= 8
+    # cada criterio de rechazo tiene casos propios
+    _, dictamenes = zip(
+        *(evaluar_con_reglas(donativo_de(c), AHORA) for c in CASOS if c["esperado"] == "no_apto")
+    )
+    reglas = {cita for d in dictamenes for cita in d.reglas_citadas if cita.startswith("Criterio interno")}
+    assert {f"Criterio interno CI-0{i}" for i in (1, 2, 3, 6, 7)} <= reglas
 
 
 @pytest.mark.parametrize("caso", CASOS, ids=[c["texto"][:40] for c in CASOS])

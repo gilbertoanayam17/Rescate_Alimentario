@@ -236,3 +236,50 @@ def test_arroz_crudo_o_fuera_de_fonda_sigue_como_abarrote(
     )
     r = agente.ejecutar(solicitud(f"2 kg de {nombre} {observaciones}", donante))
     assert r.completo and r.alimentos[0].tipo == TipoAlimento.ABARROTE
+
+
+# ------------------------------------------------- medidor de calidad del intérprete
+
+
+def _medidor():
+    import importlib.util
+    from pathlib import Path
+
+    ruta = Path(__file__).resolve().parent.parent / "scripts" / "evaluar_interprete.py"
+    spec = importlib.util.spec_from_file_location("evaluar_interprete", ruta)
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+def test_frases_de_evaluacion_bien_formadas():
+    datos = _medidor().cargar_frases()
+    assert len(datos["frases"]) == 20
+    for frase in datos["frases"]:
+        esperado = frase["esperado"]
+        assert isinstance(esperado["completo"], bool)
+        for alimento in esperado["alimentos"]:
+            assert alimento["nombre"] and isinstance(alimento["nombre"], list)
+
+
+def test_calificar_detecta_cada_campo():
+    from rescate.dominio.modelos import Alimento, ResultadoInterpretacion
+
+    medidor = _medidor()
+    esperado = {
+        "completo": True,
+        "alimentos": [{"nombre": ["bolillo"], "cantidad": 15, "unidad": "pieza", "tipo": "panaderia"}],
+        "hora_preparacion": None,
+    }
+    bien = ResultadoInterpretacion(
+        completo=True, alimentos=[Alimento(nombre="Bolillos", cantidad=15, unidad="pieza", tipo="panaderia")]
+    )
+    assert all(ok for _, ok, _ in medidor.calificar(bien, esperado))
+    mal = bien.model_copy(update={"alimentos": [bien.alimentos[0].model_copy(update={"unidad": "kg"})]})
+    fallas = [campo for campo, ok, _ in medidor.calificar(mal, esperado) if not ok]
+    assert fallas == ["bolillo: unidad"]
+
+
+def test_medidor_corre_sin_ollama_con_las_reglas(llm_falso):
+    aciertos, total, filas = _medidor().evaluar(llm_falso, _medidor().cargar_frases())
+    assert len(filas) == 20 and 0 < aciertos < total
