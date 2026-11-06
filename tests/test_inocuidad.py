@@ -85,14 +85,28 @@ def test_leche_afuera_cita_ci02():
 
 
 def test_mole_refrigerado_pide_frio_y_cita_la_nom():
-    _, d = evaluar_con_reglas(
+    hallazgos, d = evaluar_con_reglas(
         donativo_de(_caso("2 charolas de pollo en mole que hice hace una hora y está en el refri")), AHORA
     )
     assert d.dictamen == Dictamen.APTO_CON_CONDICIONES
     assert d.requiere_refrigeracion
     assert CONDICION_FRIO in d.condiciones
     assert "NOM-251-SSA1-2009, numeral 7.3.3" in d.reglas_citadas
-    assert d.vida_util_horas == 11  # 12 h de un preparado refrigerado - 1 h transcurrida
+    # Vida TOTAL de un preparado refrigerado: el Asignador le suma la hora de preparación
+    assert d.vida_util_horas == 12
+    vida = next(h for h in hallazgos if h.regla == "CI-06")
+    assert "le quedan 11 h" in vida.motivo
+
+
+def test_vida_util_es_total_y_el_limite_del_asignador_queda_en_el_futuro():
+    from rescate.herramientas.horario import limite_recoleccion
+
+    donativo = donativo_de(_caso("Medio kilo de queso fresco en el refri desde ayer a las 10"))  # hace 19 h
+    _, d = evaluar_con_reglas(donativo, AHORA)
+    assert d.vida_util_horas == 24  # lácteo
+    donativo.dictamen = d
+    donativo.recoger_antes_de = AHORA + timedelta(hours=12)  # para que mande la vida útil
+    assert limite_recoleccion(donativo, AHORA) == AHORA + timedelta(hours=5)  # 24 h - 19 h transcurridas
 
 
 def test_comida_caliente_pide_60_grados_y_recalentar():
@@ -317,7 +331,7 @@ def test_el_prompt_lleva_horas_calculadas_hallazgos_y_fragmentos(agente_rag, llm
     agente_rag.ejecutar(donativo_de(_caso(MOLE_FRIO)))
     prompt = llm_falso.llamadas[0][1]
     assert "hace 1 h, calculado por el sistema" in prompt
-    assert "CI-04:" in prompt and "Vida útil restante (calculada): 11 h" in prompt
+    assert "CI-04:" in prompt and "Vida útil (calculada): 12 h desde su preparación; le quedan 11 h" in prompt
     assert "Sección: NOM-251-SSA1-2009, numeral 7.3.3" in prompt
     assert "refrigeración a 7 °C" in base_fija.consultas[0]
 

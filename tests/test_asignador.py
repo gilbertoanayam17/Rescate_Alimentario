@@ -49,15 +49,57 @@ def test_sin_llm_y_bitacora(caso, servicio):
 
 
 def test_llm_puede_elegir_segundo(caso, llm_falso):
+    # rec-cerca sigue primero, pero rec-lejos tiene más capacidad: razón válida
+    caso[1].receptores[0] = (
+        caso[1].receptores[0].model_copy(update={"capacidad_kg_dia": 1})
+    )
     llm_falso.programar(
         "DecisionAsignacion",
         dict(
-            razonamiento="Equidad",
+            razonamiento="Le cabe todo el donativo",
             receptor_id="rec-lejos",
-            justificacion="Mejor distribución",
+            justificacion="Mejor capacidad",
         ),
     )
     assert caso[0].ejecutar(caso[1]).receptor_id == "rec-lejos"
+    assert (
+        json.loads(llm_falso.llamadas[-1][1])["candidatos"][0]["receptor_id"]
+        == "rec-cerca"
+    )
+
+
+def test_llm_no_puede_elegir_segundo_sin_ventaja(caso, llm_falso, servicio):
+    # Empatados salvo la distancia: preferir al lejano no tiene sustento
+    llm_falso.programar(
+        "DecisionAsignacion",
+        dict(
+            razonamiento="Es el más cercano",
+            receptor_id="rec-lejos",
+            justificacion="Por ser el más cercano",
+        ),
+    )
+    salida = caso[0].ejecutar(caso[1])
+    assert salida.receptor_id == "rec-cerca"
+    errores = [
+        e.contenido
+        for e in servicio.bitacora_de(caso[1].donativo.id)
+        if e.tipo == TipoEntradaBitacora.ERROR
+    ]
+    assert any("no supera" in e for e in errores)
+
+
+def test_descartados_se_explican_con_nombres_y_en_espanol(caso, servicio):
+    caso[1].donativo.alimentos.append(
+        Alimento(nombre="leche", cantidad=1, kg_estimados=1, tipo="lacteo")
+    )
+    caso[0].ejecutar(caso[1])
+    observacion = next(
+        e.contenido
+        for e in servicio.bitacora_de(caso[1].donativo.id)
+        if e.contenido.startswith("1 compatibles")
+    )
+    assert "Comedor Cerca (no acepta lácteos)" in observacion
+    assert "{" not in observacion
 
 
 def test_id_inventado_usa_respaldo(caso, llm_falso):

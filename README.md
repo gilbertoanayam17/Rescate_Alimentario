@@ -19,7 +19,7 @@ las decisiones del modelo real; las pruebas automatizadas usan un cliente simula
 En Windows (PowerShell), desde la carpeta del repositorio:
 
 ```powershell
-git clone --branch flujo-asignacion https://github.com/gilbertoanayam17/Rescate_Alimentario.git
+git clone https://github.com/gilbertoanayam17/Rescate_Alimentario.git
 cd Rescate_Alimentario
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -83,7 +83,7 @@ Verificación local del 5 de noviembre de 2026:
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite con cliente simulado | 141 pruebas aprobadas; incluye `test_flujo_basico.py` |
+| Suite con cliente simulado | 145 pruebas aprobadas; incluye `test_flujo_basico.py` |
 | AppTest de Streamlit | Cuatro roles; rechazo con motivo, reasignación, aceptación, recolección, entrega, perfiles, altas, métricas, historial y filtros |
 | Restricciones del asignador | Un no apto no se asigna; un id inventado o un receptor existente fuera del top 3 activa el respaldo |
 | Ollama real, por la fachada de servicios | Nueve consultas con `gemma4:26b`, sin errores ni respaldo: entrega tras reasignación, leche no apta y aclaración de pollo refrigerado |
@@ -99,11 +99,6 @@ entre 18 y 138 segundos; una publicación puede tardar varios minutos al encaden
 los agentes. Ensaya los tiempos en la computadora de grabación antes de producir
 el video de 5 a 7 minutos.
 
-## Equipo
-
-- Gilberto Anaya Mercado
-- Alejandro Ortega Abbadie
-
 ## Funcionalidad del MVP
 
 1. Publicar un excedente en lenguaje natural y responder preguntas de aclaración.
@@ -118,6 +113,22 @@ el video de 5 a 7 minutos.
 
 El LLM decide; las herramientas calculan. La app usa datos ficticios y un selector de roles,
 sin autenticación. La evaluación de inocuidad orienta; no constituye certificación sanitaria.
+
+### Publicar y evaluar: Intérprete e Inocuidad
+
+- **Intérprete.** El LLM convierte la frase del donante en alimentos con un esquema Pydantic. Si a
+  un perecedero le falta la hora de preparación o cómo se ha conservado, hace una sola pregunta
+  (máximo dos rondas). Los kilos, las horas ("hace una hora") y el límite de recogida los calcula
+  el código.
+- **Reglas de inocuidad.** Una cadena de 7 reglas deterministas (Chain of Responsibility, criterios
+  CI-01 a CI-07: deterioro, empaque, más de 2 h sin control de temperatura, origen desconocido,
+  cadena de frío, comida caliente y vida útil). Si dicen no apto, ahí termina: el LLM no se
+  consulta, porque nunca puede relajar un dictamen.
+- **RAG.** Si el alimento pasa las reglas, el agente busca en extractos textuales de la
+  NOM-251-SSA1-2009 (copiados del Diario Oficial de la Federación) y en los criterios del
+  proyecto, con `nomic-embed-text` y FAISS; el LLM puede mantener o endurecer el dictamen.
+- **Sin numerales inventados.** Solo se aceptan las citas del LLM que coinciden con la sección de
+  un fragmento recuperado; las demás se descartan y quedan anotadas en la bitácora.
 
 ## Modelos y datos
 
@@ -153,10 +164,23 @@ La instalación y el primer uso de modelos requieren internet; las teselas del m
 
 ## Operación y sostenibilidad
 
-La propuesta es que una ONG o municipio opere la red y mantenga la instalación. Los
-patrocinadores pueden financiarla a cambio de reportes de impacto. Donantes, comedores y
-voluntarios participarían sin cuota. Es una propuesta de operación: no existen acuerdos
-comerciales ni beneficios fiscales verificados o implementados en este MVP.
+Una organización operadora (un municipio o una ONG, idealmente donataria autorizada o aliada de
+un banco de alimentos que lo sea) instala y opera la red. Los patrocinadores con metas ESG
+(ambientales, sociales y de gobernanza) financian la operación a cambio de reportes de impacto:
+kilos rescatados y entregados, que la plataforma ya registra. Para donantes, comedores y
+voluntarios es gratis.
+
+Los comercios tienen razones legales para participar:
+
+- La Ley General de la Alimentación Adecuada y Sostenible (DOF 17-04-2024), art. 55, prohíbe que
+  los establecimientos comerciales desechen alimentos que se encuentren en condiciones de ser
+  consumidos por los seres humanos, en los términos de su Reglamento.
+- La Ley del Impuesto sobre la Renta, art. 27, fracción XX, permite deducir la mercancía que perdió
+  su valor; tratándose de bienes básicos de alimentación, antes de destruirla debe ofrecerse en
+  donación a instituciones autorizadas para recibir donativos deducibles.
+
+Es una propuesta de operación: el MVP no tramita deducciones ni tiene acuerdos firmados, y el
+beneficio fiscal depende del régimen de cada comercio y de que el receptor sea donataria autorizada.
 
 ## Límites y trabajo pendiente
 
@@ -184,3 +208,9 @@ comerciales ni beneficios fiscales verificados o implementados en este MVP.
 
 Ensayar antes de grabar. El video debe distinguir las decisiones del modelo de los cálculos
 del sistema y mostrar la configuración real utilizada. Enlace al video: pendiente.
+
+## Equipo
+
+- Gilberto Anaya Mercado: publicar y evaluar (Intérprete, Inocuidad, RAG y página del donante).
+- Alejandro Ortega Abbadie: asignar y entregar (Asignador, herramientas, datos de demostración y
+  páginas de receptor, recolector y coordinador).

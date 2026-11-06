@@ -26,7 +26,7 @@ La comida que se conserva caliente es apta con condiciones: debe mantenerse por 
 
 ## Criterio interno CI-06: vida útil
 
-Cada donativo tiene una vida útil estimada según el tipo de alimento: preparado refrigerado o congelado, 12 horas; preparado caliente, 4 horas; panadería, 24 horas; fruta y verdura, 48 horas; lácteo, 24 horas; carne y pescado, 12 horas; abarrote cerrado, 720 horas (30 días); otros, 24 horas. Un perecedero a temperatura ambiente solo tiene 2 horas (criterio CI-02). Las horas se cuentan desde la preparación: el sistema informa las que le quedan al alimento que caduca primero, y si ya se acabaron, el donativo es no apto. El Agente Asignador usa esta vida útil para elegir un receptor que lo pueda recibir a tiempo.
+Cada donativo tiene una vida útil estimada según el tipo de alimento: preparado refrigerado o congelado, 12 horas; preparado caliente, 4 horas; panadería, 24 horas; fruta y verdura, 48 horas; lácteo, 24 horas; carne y pescado, 12 horas; abarrote cerrado, 720 horas (30 días); otros, 24 horas. Un perecedero a temperatura ambiente solo tiene 2 horas (criterio CI-02). Las horas se cuentan desde la preparación (o desde que se publicó, si no se sabe): el sistema informa la vida útil del alimento que caduca primero y cuántas horas le quedan, y si ya se acabaron, el donativo es no apto. El Agente Asignador usa esta vida útil para elegir un receptor que lo pueda recibir a tiempo.
 
 ## Criterio interno CI-07: empaque
 

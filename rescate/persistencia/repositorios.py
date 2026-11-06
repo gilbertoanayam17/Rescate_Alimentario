@@ -242,7 +242,7 @@ class BitacoraDuckDB(_BaseDuckDB, RepositorioBitacora):
     def de_donativo(self, donativo_id: str) -> list[EntradaBitacora]:
         filas = self._ejecutar(
             "SELECT id, donativo_id, agente, paso, tipo, contenido, datos, fecha FROM bitacora "
-            "WHERE donativo_id = ? ORDER BY fecha, paso",
+            "WHERE donativo_id = ? ORDER BY fecha, rowid",  # rowid = orden de inserción
             [donativo_id],
         )
         return [_a_entrada(f) for f in filas]
@@ -250,7 +250,7 @@ class BitacoraDuckDB(_BaseDuckDB, RepositorioBitacora):
     def recientes(self, limite: int = 200) -> list[EntradaBitacora]:
         filas = self._ejecutar(
             "SELECT id, donativo_id, agente, paso, tipo, contenido, datos, fecha FROM bitacora "
-            "ORDER BY fecha DESC, paso DESC LIMIT ?",
+            "ORDER BY fecha DESC, rowid DESC LIMIT ?",
             [limite],
         )
         return [_a_entrada(f) for f in filas]
