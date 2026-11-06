@@ -328,7 +328,10 @@ class AgenteInocuidad(Agente[Donativo, DictamenInocuidad]):
         if reglas.condiciones:
             lineas.append("Condiciones preliminares: " + "; ".join(reglas.condiciones))
         if reglas.vida_util_horas is not None:
-            lineas.append(f"Vida útil restante (calculada): {reglas.vida_util_horas:g} h")
+            vida = f"Vida útil (calculada): {reglas.vida_util_horas:g} h desde su preparación"
+            if horas is not None:
+                vida += f"; le quedan {max(0.0, round(reglas.vida_util_horas - horas, 1)):g} h"
+            lineas.append(vida)
         lineas.append("")
         if fragmentos:
             lineas.append("Fragmentos de referencia:")

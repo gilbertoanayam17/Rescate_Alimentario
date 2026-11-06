@@ -285,7 +285,11 @@ class ReglaComidaCaliente(ReglaInocuidad):
 
 
 class ReglaVidaUtil(ReglaInocuidad):
-    """CI-06: vida útil por tipo. Devuelve las horas que le QUEDAN; si ya se acabó, no apto."""
+    """CI-06: vida útil por tipo, contada desde la preparación; si ya se acabó, no apto.
+
+    `vida_util_horas` es la vida TOTAL del alimento que caduca primero (no las horas que le
+    quedan): el Asignador calcula el límite como `hora_preparacion (o creado) + vida_util_horas`.
+    """
 
     codigo = "CI-06"
     VIDA_BASE = {
@@ -312,22 +316,30 @@ class ReglaVidaUtil(ReglaInocuidad):
     def revisar(self, donativo: Donativo, ahora: datetime) -> Hallazgo | None:
         if not donativo.alimentos:
             return None
-        transcurridas = horas_desde(donativo.hora_preparacion, ahora) or 0.0
-        restantes = {a.nombre: self.vida_base(a) - transcurridas for a in donativo.alimentos}
-        nombre, minima = min(restantes.items(), key=lambda par: par[1])
-        if minima <= 0:
+        transcurridas = horas_desde(donativo.hora_preparacion, ahora)
+        vidas = {a.nombre: self.vida_base(a) for a in donativo.alimentos}
+        nombre, vida = min(vidas.items(), key=lambda par: par[1])  # la hora de preparación es común
+        etiqueta = nombre[:1].upper() + nombre[1:]
+        if transcurridas is None:
+            motivo = f"{etiqueta}: vida útil estimada de {_h(vida)}."
+        elif vida - transcurridas <= 0:
             return Hallazgo(
                 regla=self.codigo,
                 dictamen=Dictamen.NO_APTO,
-                motivo=f"{nombre[:1].upper() + nombre[1:]}: ya pasó su vida útil ({_h(transcurridas)} desde su preparación).",
-                vida_util_horas=0,
+                motivo=(
+                    f"{etiqueta}: ya pasó su vida útil de {_h(vida)} "
+                    f"({_h(transcurridas)} desde su preparación)."
+                ),
+                vida_util_horas=vida,
                 citas=[criterio(self.codigo)],
             )
+        else:
+            motivo = f"{etiqueta}: vida útil de {_h(vida)} desde su preparación; le quedan {_h(vida - transcurridas)}."
         return Hallazgo(
             regla=self.codigo,
             dictamen=Dictamen.APTO,
-            motivo=f"Vida útil restante estimada: {_h(minima)} ({nombre}).",
-            vida_util_horas=round(minima, 1),
+            motivo=motivo,
+            vida_util_horas=vida,
             citas=[criterio(self.codigo)],
         )
 
