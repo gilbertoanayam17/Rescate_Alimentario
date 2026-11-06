@@ -50,3 +50,21 @@ def test_bitacora_por_donativo():
     entradas = repo.de_donativo("x")
     assert entradas[0].contenido == "hola" and entradas[0].datos == {"a": 1}
     assert len(repo.recientes()) == 1
+
+
+def test_bitacora_respeta_el_orden_de_insercion_dentro_del_mismo_segundo():
+    """Entradas de agentes distintos anotadas en el mismo segundo salen en el orden real."""
+    from datetime import datetime
+
+    repo = BitacoraDuckDB(conectar(":memory:"))
+    fecha = datetime(2026, 11, 5, 17, 0, 0)
+    for agente, paso in [("Intérprete", 4), ("Intérprete", 5), ("Inocuidad", 1), ("Asignador", 1)]:
+        repo.agregar(
+            EntradaBitacora(
+                donativo_id="x", agente=agente, paso=paso, tipo=TipoEntradaBitacora.RESULTADO,
+                contenido=f"{agente} {paso}", fecha=fecha,
+            )
+        )
+    orden = [e.contenido for e in repo.de_donativo("x")]
+    assert orden == ["Intérprete 4", "Intérprete 5", "Inocuidad 1", "Asignador 1"]
+    assert [e.contenido for e in repo.recientes(10)] == list(reversed(orden))
