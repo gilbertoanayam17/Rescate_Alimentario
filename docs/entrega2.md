@@ -12,10 +12,10 @@ El receptor puede aceptar o rechazar indicando un motivo. El rechazo activa una 
 
 La solución utiliza Python, Streamlit, LangGraph, DuckDB y Ollama. Se aplican los patrones State, Repository, Facade y Strategy, además de reglas de inocuidad encadenadas. Para ejecutarla se instalan las dependencias, se configura `.env` y se inicia `streamlit run app.py`, siguiendo el README. Las pruebas automatizadas usan un cliente simulado y no requieren Ollama.
 
-La verificación local aprobó 141 pruebas con cliente simulado, incluidas las pantallas. Un ensayo separado realizó nueve consultas reales con gemma4:26b y recuperación documental, sin recurrir al respaldo determinista. Se comprobó entrega tras reasignación, rechazo por inocuidad y aclaración de un alimento refrigerado.
+La verificación local aprobó 144 pruebas con cliente simulado, incluidas las pantallas. Un ensayo separado realizó nueve consultas reales con gemma4:26b y recuperación documental, sin recurrir al respaldo determinista. Se comprobó entrega tras reasignación, rechazo por inocuidad y aclaración de un alimento refrigerado.
 
-El MVP utiliza participantes ficticios y selección de roles sin autenticación. Horario y capacidad son criterios de puntuación, por lo que el receptor debe revisar la propuesta antes de aceptarla. No incluye predicción, rutas optimizadas ni certificación sanitaria. La operación propuesta corresponde a una ONG o municipio con apoyo de patrocinadores.
+El MVP utiliza participantes ficticios y selección de roles sin autenticación. Horario y capacidad son criterios de puntuación, por lo que el receptor debe revisar la propuesta antes de aceptarla. No incluye predicción, rutas optimizadas ni certificación sanitaria. La operación la sostendría una ONG o municipio con patrocinadores con metas ESG; los comercios participan por el artículo 55 de la Ley General de la Alimentación Adecuada y Sostenible, que prohíbe desechar alimentos aptos, y la deducción del artículo 27, fracción XX, de la LISR.
 
-Código y documentación: https://github.com/gilbertoanayam17/Rescate_Alimentario/tree/flujo-asignacion
+Código y documentación: https://github.com/gilbertoanayam17/Rescate_Alimentario
 
 Video: PENDIENTE — sustituir por el enlace después de grabar y revisar los permisos de acceso.
