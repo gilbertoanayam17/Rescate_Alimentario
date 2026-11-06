@@ -83,7 +83,7 @@ Verificación local del 5 de noviembre de 2026:
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite con cliente simulado | 144 pruebas aprobadas; incluye `test_flujo_basico.py` |
+| Suite con cliente simulado | 145 pruebas aprobadas; incluye `test_flujo_basico.py` |
 | AppTest de Streamlit | Cuatro roles; rechazo con motivo, reasignación, aceptación, recolección, entrega, perfiles, altas, métricas, historial y filtros |
 | Restricciones del asignador | Un no apto no se asigna; un id inventado o un receptor existente fuera del top 3 activa el respaldo |
 | Ollama real, por la fachada de servicios | Nueve consultas con `gemma4:26b`, sin errores ni respaldo: entrega tras reasignación, leche no apta y aclaración de pollo refrigerado |
