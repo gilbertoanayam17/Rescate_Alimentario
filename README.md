@@ -11,7 +11,7 @@ receptor más adecuado. Proyecto del Hackathon Agéntico 2026B de Diseño de Sof
 alineado al ODS 2 (Hambre cero) y a la meta 12.3 del ODS 12.
 
 > MVP de la segunda entrega: viernes 6 de noviembre de 2026, 23:30 (centro de México).
-> El video y su enlace siguen pendientes.
+> Video demo: https://youtu.be/A0HnOscPrOA
 
 ## Cómo correrlo
 
@@ -64,6 +64,8 @@ en caché. Un índice generado con embeddings simulados se reconstruye al usar e
 
 ## Arquitectura
 
+![Arquitectura del MVP](docs/img/arquitectura_mvp.png)
+
 | Capa | Carpeta | Qué hace |
 | --- | --- | --- |
 | Interfaz | `app.py`, `ui/` | Streamlit con selector de rol (donante, receptor, recolector, coordinador) |
@@ -83,11 +85,12 @@ python scripts/evaluar_interprete.py           # calidad del Intérprete con el 
 python scripts/evaluar_interprete.py --reglas  # línea base: solo reglas, sin LLM
 ```
 
-Verificación local del 5 de noviembre de 2026:
+Verificación local del 5 y 6 de noviembre de 2026:
 
 | Comprobación | Resultado |
 | --- | --- |
 | Suite con cliente simulado | 171 pruebas aprobadas; incluye `test_flujo_basico.py` |
+| Cobertura (coverage.py) | 92 % de `rescate/` y `ui/`; la lógica determinista (herramientas, reglas y estados), entre 96 y 100 % |
 | Inocuidad | 51 casos en `tests/casos_inocuidad.json`: los 35 no aptos se rechazan, ninguno sale aprobado (meta de la visión: 30 no aptos) |
 | Intérprete con `gemma4:e4b` | 20 frases de `tests/frases_interprete.json`: 160 de 160 campos correctos (100 %, igual en 3 corridas; meta de la visión: 90 %). Las reglas de respaldo solas logran 73 %. Es una muestra chica y 3 frases se parecen a los ejemplos del prompt |
 | Guion en la interfaz con `gemma4:e4b` | Escenas 2 a 6 de punta a punta con AppTest y Ollama real: aclaración, no apto, rechazo y reasignación, recolección, entrega y coordinador |
@@ -95,7 +98,7 @@ Verificación local del 5 de noviembre de 2026:
 | Restricciones del asignador | Un no apto no se asigna; un id inventado o un receptor existente fuera del top 3 activa el respaldo |
 | Ollama real, por la fachada de servicios | Nueve consultas con `gemma4:26b`, sin errores ni respaldo: entrega tras reasignación, leche no apta y aclaración de pollo refrigerado |
 | RAG real | 24 fragmentos con `nomic-embed-text` y FAISS; búsqueda de refrigeración comprobada |
-| Revisión visual en navegador | Pendiente, incluidas las teselas del mapa; AppTest comprueba comportamiento, no apariencia |
+| Revisión visual en navegador | Hecha al grabar el video demo con `gemma4:e4b`, con las cuatro pantallas |
 
 Entorno verificado: Python 3.13.7, Streamlit 1.67.0, DuckDB 2.0.0, Pydantic 2.14.3,
 LangGraph 1.2.20, cliente Ollama 0.6.3 y pytest 9.2.0. Ruff comprobó imports,
@@ -103,8 +106,8 @@ estilo y errores estáticos de los archivos del flujo de asignación.
 
 Ollama ejecutó `gemma4:26b` en CPU. Las consultas individuales del ensayo tardaron
 entre 18 y 138 segundos; una publicación puede tardar varios minutos al encadenar
-los agentes. Ensaya los tiempos en la computadora de grabación antes de producir
-el video de 5 a 7 minutos.
+los agentes. El video se grabó con `gemma4:e4b`: con el modelo ya cargado, cada
+publicación tarda unos 5 segundos.
 
 ## Funcionalidad del MVP
 
@@ -168,6 +171,9 @@ La instalación y el primer uso de modelos requieren internet; las teselas del m
 | Chain of Responsibility | Reglas de inocuidad |
 | Inversión de dependencias | Cliente LLM y repositorios por interfaces |
 | Orquestación por grafo | LangGraph encadena los agentes |
+| Raíz de composición | `rescate/contenedor.py` crea y conecta todas las piezas |
+
+Dónde vive cada patrón y cómo extenderlo: [docs/arquitectura.md](docs/arquitectura.md).
 
 ## Operación y sostenibilidad
 
@@ -199,22 +205,40 @@ beneficio fiscal depende del régimen de cada comercio y de que el receptor sea 
   diseñado para producción. No utilizar para coordinar donaciones reales sin revisión adicional.
 - La versión implementa selección entre candidatos; el ciclo ReAct de varios pasos
   queda fuera de esta entrega.
-- Pendientes: revisión visual y ensayo del video en el equipo de grabación, video y enlace.
+- Mediciones pendientes: usabilidad con 5 usuarios externos y rendimiento en 20 corridas por
+  perfil (sección 10 de [docs/vision_y_alcances.md](docs/vision_y_alcances.md)).
 - Para la entrega final del 24 de noviembre: UML de casos de uso, componentes, clases y
   secuencias; consolidación del alcance y video de todos los casos implementados.
 
-## Guion breve de demo
+## Video demo
 
-1. Mostrar problema, usuarios y ODS (30 s).
-2. Publicar un alimento apto, revisar el dictamen y la justificación del asignador (90 s).
-3. Mostrar un alimento no apto y su regla (45 s).
-4. Rechazar desde el receptor y aceptar desde el nuevo receptor (60 s).
-5. Recoger y confirmar entrega (45 s).
-6. Mostrar métricas, historial, bitácora y alta de un participante (60 s).
-7. Explicar arquitectura, operación y pendientes (45 s).
+[Ver el video en YouTube](https://youtu.be/A0HnOscPrOA). Se grabó con `gemma4:e4b` y recorre:
 
-Ensayar antes de grabar. El video debe distinguir las decisiones del modelo de los cálculos
-del sistema y mostrar la configuración real utilizada. Enlace al video: pendiente.
+1. Contexto general del proyecto.
+2. Problema, usuarios y ODS.
+3. El donante publica un pollo en mole: el Intérprete pregunta lo que falta, Inocuidad lo
+   dictamina apto con condiciones y el Asignador justifica su elección. Bitácora de los agentes.
+4. Variedad del Intérprete: varios alimentos en una frase, comida caliente y lenguaje coloquial.
+5. Alimentos no aptos: leche fuera del refrigerador (CI-02) y tamales agrios (CI-01).
+6. El receptor rechaza con motivo, el sistema reasigna solo y el nuevo receptor acepta.
+7. Recolección y entrega.
+8. Cancelación, caso sin receptor, alta de un comedor y reintento de la asignación.
+9. Coordinación: métricas, historial de estados y bitácora.
+
+## Documentación
+
+| Documento | Contenido |
+| --- | --- |
+| [docs/entrega2.md](docs/entrega2.md) | Texto de la segunda entrega |
+| [docs/vision_y_alcances.md](docs/vision_y_alcances.md) | Documento de Visión y Alcances, versión 2, ajustado a lo que quedó en el MVP ([.docx](docs/Vision_y_Alcances_Rescate_Alimentario_v2.docx)) |
+| [docs/arquitectura.md](docs/arquitectura.md) | Capas, recorrido de un donativo, ciclo de vida y patrones de diseño |
+| [docs/manual_de_uso.md](docs/manual_de_uso.md) | Cómo usar cada rol, frases de prueba y problemas comunes |
+
+## Licencia
+
+El código se publica bajo la [licencia MIT](LICENSE). Los modelos (`gemma4` y `nomic-embed-text`)
+conservan sus propias licencias y condiciones de uso, que se consultan en la
+[biblioteca de Ollama](https://ollama.com/library).
 
 ## Equipo
 
