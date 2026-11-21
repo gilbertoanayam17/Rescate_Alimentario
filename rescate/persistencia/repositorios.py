@@ -9,18 +9,22 @@ Archivo COMPARTIDO (fase 0).
 from __future__ import annotations
 
 import json
+import threading
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta
 
 import duckdb
 
-from rescate.dominio.enums import EstadoDonativo, Evento, Rol
+from rescate.dominio.enums import EstadoCaso, EstadoDonativo, Evento, Rol, TipoCaso
 from rescate.dominio.modelos import (
     CLASE_POR_ROL,
+    Aviso,
+    CasoEscalado,
     Donante,
     Donativo,
     EntradaBitacora,
     Participante,
+    Pronostico,
     Receptor,
     Recolector,
     ahora,
@@ -78,6 +82,11 @@ class RepositorioDonativos(ABC):
     @abstractmethod
     def historial(self, donativo_id: str) -> list[dict]: ...
 
+    @abstractmethod
+    def tomar_para_recoleccion(self, actualizado: Donativo) -> bool:
+        """Guarda `actualizado` (ya EN_RECOLECCION y con recolector_id) solo si en la base sigue
+        ASIGNADO y sin recolector. Devuelve True si lo tomó; False si otro voluntario ganó."""
+
     # Consultas derivadas (comunes a cualquier implementación)
     def de_donante(self, donante_id: str) -> list[Donativo]:
         return [d for d in self.listar() if d.donante_id == donante_id]
@@ -109,6 +118,60 @@ class RepositorioDonativos(ABC):
             for d in self.de_receptor(receptor_id)
             if d.estado == EstadoDonativo.ENTREGADO and d.actualizado >= desde
         ]
+
+
+class RepositorioAvisos(ABC):
+    """Avisos dentro de la app (CAR-06)."""
+
+    @abstractmethod
+    def agregar(self, aviso: Aviso) -> None: ...
+
+    @abstractmethod
+    def de_destinatario(
+        self, rol: Rol, destinatario_id: str | None, solo_no_leidos: bool = False, limite: int = 50
+    ) -> list[Aviso]: ...
+
+    @abstractmethod
+    def marcar_leido(self, aviso_id: str, rol: Rol, destinatario_id: str | None) -> bool:
+        """False si el aviso no existe o no es de ese destinatario."""
+
+
+class RepositorioCasos(ABC):
+    """Bandeja de casos escalados al coordinador (CAR-10)."""
+
+    @abstractmethod
+    def guardar(self, caso: CasoEscalado) -> None: ...
+
+    @abstractmethod
+    def obtener(self, caso_id: str) -> CasoEscalado | None: ...
+
+    @abstractmethod
+    def abiertos(self) -> list[CasoEscalado]: ...
+
+    @abstractmethod
+    def abierto_de(self, tipo: TipoCaso, donativo_id: str | None) -> CasoEscalado | None: ...
+
+    @abstractmethod
+    def de_donativo(self, donativo_id: str) -> list[CasoEscalado]: ...
+
+
+class RepositorioPronosticos(ABC):
+    """Pronósticos de excedentes (CAR-07)."""
+
+    @abstractmethod
+    def guardar(self, pronostico: Pronostico) -> None: ...
+
+    @abstractmethod
+    def obtener(self, pronostico_id: str) -> Pronostico | None: ...
+
+    @abstractmethod
+    def de_donante(self, donante_id: str, desde: date) -> list[Pronostico]: ...
+
+    @abstractmethod
+    def de_receptor(self, receptor_id: str, desde: date) -> list[Pronostico]: ...
+
+    @abstractmethod
+    def del_dia(self, fecha: date) -> list[Pronostico]: ...
 
 
 class RepositorioBitacora(ABC):
@@ -166,9 +229,14 @@ class ParticipantesDuckDB(_BaseDuckDB, RepositorioParticipantes):
 
 
 class DonativosDuckDB(_BaseDuckDB, RepositorioDonativos):
+    #: Un solo proceso atiende todas las sesiones de Streamlit: el candado evita que dos
+    #: voluntarios tomen el mismo donativo entre la lectura y la escritura.
+    _candado_toma = threading.Lock()
+
     def guardar(self, donativo: Donativo) -> None:
         self._ejecutar(
-            "INSERT OR REPLACE INTO donativos VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO donativos (id, donante_id, estado, datos, creado, actualizado, "
+            "receptor_id, recolector_id, kg_totales) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 donativo.id,
                 donativo.donante_id,
@@ -176,8 +244,30 @@ class DonativosDuckDB(_BaseDuckDB, RepositorioDonativos):
                 donativo.model_dump_json(),
                 donativo.creado,
                 donativo.actualizado,
+                donativo.receptor_id,
+                donativo.recolector_id,
+                donativo.kg_totales,
             ],
         )
+
+    def tomar_para_recoleccion(self, actualizado: Donativo) -> bool:
+        with self._candado_toma:
+            try:
+                filas = self._ejecutar(
+                    "UPDATE donativos SET estado = ?, datos = ?, actualizado = ?, recolector_id = ? "
+                    "WHERE id = ? AND estado = ? AND recolector_id IS NULL RETURNING id",
+                    [
+                        actualizado.estado.value,
+                        actualizado.model_dump_json(),
+                        actualizado.actualizado,
+                        actualizado.recolector_id,
+                        actualizado.id,
+                        EstadoDonativo.ASIGNADO.value,
+                    ],
+                )
+            except duckdb.TransactionException:
+                return False  # otra transacción tocó la misma fila
+        return bool(filas)
 
     def obtener(self, donativo_id: str) -> Donativo | None:
         filas = self._ejecutar("SELECT datos FROM donativos WHERE id = ?", [donativo_id])
@@ -215,7 +305,7 @@ class DonativosDuckDB(_BaseDuckDB, RepositorioDonativos):
     def historial(self, donativo_id: str) -> list[dict]:
         filas = self._ejecutar(
             "SELECT anterior, nuevo, evento, motivo, fecha FROM historial_estados "
-            "WHERE donativo_id = ? ORDER BY fecha",
+            "WHERE donativo_id = ? ORDER BY fecha, rowid",
             [donativo_id],
         )
         return [
@@ -254,6 +344,109 @@ class BitacoraDuckDB(_BaseDuckDB, RepositorioBitacora):
             [limite],
         )
         return [_a_entrada(f) for f in filas]
+
+
+class AvisosDuckDB(_BaseDuckDB, RepositorioAvisos):
+    def agregar(self, aviso: Aviso) -> None:
+        self._ejecutar(
+            "INSERT OR REPLACE INTO avisos (id, rol, destinatario_id, donativo_id, leido, datos, fecha) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                aviso.id,
+                aviso.rol.value,
+                aviso.destinatario_id,
+                aviso.donativo_id,
+                aviso.leido,
+                aviso.model_dump_json(),
+                aviso.fecha,
+            ],
+        )
+
+    def de_destinatario(
+        self, rol: Rol, destinatario_id: str | None, solo_no_leidos: bool = False, limite: int = 50
+    ) -> list[Aviso]:
+        filtro = " AND leido = FALSE" if solo_no_leidos else ""
+        filas = self._ejecutar(
+            "SELECT datos, leido FROM avisos WHERE rol = ? AND destinatario_id IS NOT DISTINCT FROM ?"
+            + filtro
+            + " ORDER BY fecha DESC, rowid DESC LIMIT ?",
+            [rol.value, destinatario_id, limite],
+        )
+        return [Aviso.model_validate_json(d).model_copy(update={"leido": bool(leido)}) for d, leido in filas]
+
+    def marcar_leido(self, aviso_id: str, rol: Rol, destinatario_id: str | None) -> bool:
+        filas = self._ejecutar(
+            "UPDATE avisos SET leido = TRUE WHERE id = ? AND rol = ? "
+            "AND destinatario_id IS NOT DISTINCT FROM ? RETURNING id",
+            [aviso_id, rol.value, destinatario_id],
+        )
+        return bool(filas)
+
+
+class CasosDuckDB(_BaseDuckDB, RepositorioCasos):
+    def guardar(self, caso: CasoEscalado) -> None:
+        self._ejecutar(
+            "INSERT OR REPLACE INTO casos (id, tipo, donativo_id, estado, datos, creado) VALUES (?, ?, ?, ?, ?, ?)",
+            [caso.id, caso.tipo.value, caso.donativo_id, caso.estado.value, caso.model_dump_json(), caso.creado],
+        )
+
+    def obtener(self, caso_id: str) -> CasoEscalado | None:
+        filas = self._ejecutar("SELECT datos FROM casos WHERE id = ?", [caso_id])
+        return CasoEscalado.model_validate_json(filas[0][0]) if filas else None
+
+    def abiertos(self) -> list[CasoEscalado]:
+        filas = self._ejecutar(
+            "SELECT datos FROM casos WHERE estado = ? ORDER BY creado, rowid", [EstadoCaso.ABIERTO.value]
+        )
+        return [CasoEscalado.model_validate_json(f[0]) for f in filas]
+
+    def abierto_de(self, tipo: TipoCaso, donativo_id: str | None) -> CasoEscalado | None:
+        filas = self._ejecutar(
+            "SELECT datos FROM casos WHERE tipo = ? AND estado = ? AND donativo_id IS NOT DISTINCT FROM ?",
+            [tipo.value, EstadoCaso.ABIERTO.value, donativo_id],
+        )
+        return CasoEscalado.model_validate_json(filas[0][0]) if filas else None
+
+    def de_donativo(self, donativo_id: str) -> list[CasoEscalado]:
+        filas = self._ejecutar(
+            "SELECT datos FROM casos WHERE donativo_id = ? ORDER BY creado, rowid", [donativo_id]
+        )
+        return [CasoEscalado.model_validate_json(f[0]) for f in filas]
+
+
+class PronosticosDuckDB(_BaseDuckDB, RepositorioPronosticos):
+    def guardar(self, pronostico: Pronostico) -> None:
+        self._ejecutar(
+            "INSERT OR REPLACE INTO pronosticos (id, donante_id, fecha, estado, receptor_sugerido_id, datos) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                pronostico.id,
+                pronostico.donante_id,
+                pronostico.fecha,
+                pronostico.estado.value,
+                pronostico.receptor_sugerido_id,
+                pronostico.model_dump_json(),
+            ],
+        )
+
+    def obtener(self, pronostico_id: str) -> Pronostico | None:
+        filas = self._ejecutar("SELECT datos FROM pronosticos WHERE id = ?", [pronostico_id])
+        return Pronostico.model_validate_json(filas[0][0]) if filas else None
+
+    def _consultar(self, condicion: str, parametros: list) -> list[Pronostico]:
+        filas = self._ejecutar(
+            f"SELECT datos FROM pronosticos WHERE {condicion} ORDER BY fecha, rowid", parametros
+        )
+        return [Pronostico.model_validate_json(f[0]) for f in filas]
+
+    def de_donante(self, donante_id: str, desde: date) -> list[Pronostico]:
+        return self._consultar("donante_id = ? AND fecha >= ?", [donante_id, desde])
+
+    def de_receptor(self, receptor_id: str, desde: date) -> list[Pronostico]:
+        return self._consultar("receptor_sugerido_id = ? AND fecha >= ?", [receptor_id, desde])
+
+    def del_dia(self, fecha: date) -> list[Pronostico]:
+        return self._consultar("fecha = ?", [fecha])
 
 
 def _a_participante(rol: str, datos: str) -> Participante:

@@ -5,6 +5,28 @@ Archivo COMPARTIDO (fase 0). Agregar valores es retrocompatible; renombrar o qui
 from enum import Enum
 
 
+class TipoCaso(str, Enum):
+    """Por qué un caso llega a la bandeja del coordinador (CAR-10)."""
+
+    SIN_RECEPTOR = "sin_receptor"
+    POSIBLE_INYECCION = "posible_inyeccion"
+    INTERPRETACION_CORREGIDA = "interpretacion_corregida"
+    INOCUIDAD_DUDOSA = "inocuidad_dudosa"
+    RECOLECCION_VENCIDA = "recoleccion_vencida"
+    RECHAZOS_REPETIDOS = "rechazos_repetidos"
+
+
+class EstadoCaso(str, Enum):
+    ABIERTO = "abierto"
+    RESUELTO = "resuelto"
+
+
+class EstadoPronostico(str, Enum):
+    VIGENTE = "vigente"
+    PUBLICADO = "publicado"
+    DESCARTADO = "descartado"
+
+
 class Rol(str, Enum):
     DONANTE = "donante"
     RECEPTOR = "receptor"
