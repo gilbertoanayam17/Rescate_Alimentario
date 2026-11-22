@@ -4,23 +4,24 @@ En el MVP no hay login: en la barra lateral se elige el rol y el participante
 (los cuatro roles se simulan desde la misma app).
 
 Archivo COMPARTIDO (fase 0). Cada página vive en ui/<rol>.py y expone
-`mostrar(servicio, participante)`.
+`mostrar(servicios, actor)`.
 """
 import streamlit as st
 
-from rescate.contenedor import construir_servicio
+from rescate.contenedor import construir_servicios
 from rescate.dominio.enums import Rol
+from rescate.dominio.modelos import Actor
 from ui import coordinador, donante, receptor, recolector
 
 st.set_page_config(page_title="Rescate Alimentario", page_icon="🥖", layout="wide")
 
 
 @st.cache_resource
-def obtener_servicio():
-    return construir_servicio()
+def obtener_servicios():
+    return construir_servicios()
 
 
-servicio = obtener_servicio()
+servicios = obtener_servicios()
 
 PAGINAS = {
     Rol.DONANTE: donante,
@@ -39,9 +40,9 @@ with st.sidebar:
     st.title("Rescate Alimentario")
     st.caption("Del sobrante de la fonda al comedor comunitario")
     rol = st.radio("Entrar como", list(PAGINAS), format_func=ETIQUETAS.get, key="rol")
-    participante = None
+    actor = Actor(rol=Rol.COORDINADOR) if rol == Rol.COORDINADOR else None
     if rol != Rol.COORDINADOR:
-        opciones = servicio.participantes(rol)
+        opciones = servicios.participantes.listar(rol)
         if not opciones:
             st.warning("No hay participantes con este rol. Da de alta uno como coordinador.")
         else:
@@ -49,8 +50,8 @@ with st.sidebar:
             elegido = st.selectbox(
                 "¿Quién eres?", list(nombres), format_func=nombres.get, key=f"participante_{rol.value}"
             )
-            participante = servicio.participante(elegido)
+            actor = Actor(rol=rol, participante_id=elegido)
     st.divider()
-    st.caption(servicio.estado_llm())
+    st.caption(servicios.estado_llm())
 
-PAGINAS[rol].mostrar(servicio, participante)
+PAGINAS[rol].mostrar(servicios, actor)

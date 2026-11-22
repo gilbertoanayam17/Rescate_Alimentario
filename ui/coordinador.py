@@ -8,13 +8,13 @@ import streamlit as st
 from rescate.dominio.enums import EstadoDonativo as E
 from rescate.dominio.enums import Rol, TipoAlimento
 from rescate.dominio.modelos import (
+    Actor,
     Donante,
-    Participante,
     Receptor,
     Recolector,
     Ubicacion,
 )
-from rescate.servicios import ErrorServicio, ServicioDonativos
+from rescate.servicios import ErrorServicio, Servicios
 from ui.comun import (
     ETIQUETA_ESTADO,
     historial_estados,
@@ -24,12 +24,12 @@ from ui.comun import (
 from ui.receptor import ETIQUETAS
 
 
-def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> None:
+def mostrar(servicios: Servicios, actor: Actor | None) -> None:
     """Administra la demostración y permite consultar su trazabilidad."""
     st.header("Coordinación")
     if "coordinador_aviso" in st.session_state:
         st.success(st.session_state.pop("coordinador_aviso"))
-    todos = servicio.todos()
+    todos = servicios.reportes.todos(actor)
     pendientes = [
         d
         for d in todos
@@ -68,17 +68,17 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
         )
         for d in todos:
             if d.estado in estados:
-                tarjeta_donativo(servicio, d, mostrar_bitacora=False)
+                tarjeta_donativo(servicios, actor, d, mostrar_bitacora=False)
                 with st.expander(f"Historial {d.id}"):
-                    historial_estados(servicio, d.id)
+                    historial_estados(servicios, actor, d.id)
     with tabs[2]:
         if not pendientes:
             st.info("No hay casos pendientes de asignación.")
         for d in pendientes:
-            tarjeta_donativo(servicio, d)
+            tarjeta_donativo(servicios, actor, d)
             if st.button("Reintentar asignación", key=f"coordinador_reintentar_{d.id}"):
                 try:
-                    servicio.reintentar_asignacion(d.id)
+                    servicios.distribucion.reintentar_asignacion(actor, d.id)
                     st.session_state.coordinador_aviso = "Asignación reevaluada."
                     st.rerun()
                 except ErrorServicio as exc:
@@ -86,7 +86,7 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
     with tabs[3]:
         for rol in (Rol.DONANTE, Rol.RECEPTOR, Rol.RECOLECTOR):
             st.subheader(rol.value.capitalize())
-            personas = servicio.participantes(rol)
+            personas = servicios.participantes.listar(rol)
             st.dataframe(
                 [
                     {"id": p.id, "nombre": p.nombre, "dirección": p.ubicacion.direccion}
@@ -149,7 +149,8 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
                         Rol.RECEPTOR: Receptor,
                         Rol.RECOLECTOR: Recolector,
                     }[rol]
-                    servicio.registrar_participante(
+                    servicios.participantes.registrar(
+                        actor,
                         clase(
                             nombre=nombre.strip(),
                             ubicacion=Ubicacion(lat=lat, lon=lon, direccion=direccion),
@@ -160,7 +161,7 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
                     st.rerun()
                 except ErrorServicio as exc:
                     st.error(str(exc))
-        personas = servicio.participantes()
+        personas = servicios.participantes.listar()
         if personas:
             elegido = st.selectbox(
                 "Participante para eliminar",
@@ -188,13 +189,13 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
                 key="coordinador_eliminar",
             ):
                 try:
-                    servicio.eliminar_participante(elegido.id)
+                    servicios.participantes.eliminar(actor, elegido.id)
                     st.session_state.coordinador_aviso = "Participante eliminado."
                     st.rerun()
                 except ErrorServicio as exc:
                     st.error(str(exc))
     with tabs[4]:
-        entradas = servicio.bitacora_reciente(200)
+        entradas = servicios.reportes.bitacora_reciente(actor, 200)
         agente = st.selectbox(
             "Agente",
             ["Todos"] + sorted({e.agente for e in entradas}),

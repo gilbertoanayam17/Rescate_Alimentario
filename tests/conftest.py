@@ -1,17 +1,17 @@
-"""Fixtures compartidas: un servicio completo en memoria con el LLM falso.
+"""Fixtures compartidas: una aplicación completa en memoria con el LLM falso.
 
 Las pruebas NO dependen de datos/semilla.json (Alejandro lo puede cambiar libremente):
 cada prueba crea sus propios participantes con las fixtures de abajo.
 
-Archivo COMPARTIDO (fase 0).
+Archivo COMPARTIDO.
 """
 from __future__ import annotations
 
 import pytest
 
-from rescate.contenedor import construir_servicio
-from rescate.dominio.enums import TipoAlimento
-from rescate.dominio.modelos import Donante, Receptor, Recolector, Ubicacion
+from rescate.contenedor import construir_aplicacion
+from rescate.dominio.enums import Rol, TipoAlimento
+from rescate.dominio.modelos import Actor, Donante, Receptor, Recolector, Ubicacion
 from rescate.llm.falso import ClienteLLMFalso
 
 
@@ -21,24 +21,46 @@ def llm_falso() -> ClienteLLMFalso:
 
 
 @pytest.fixture
-def servicio(llm_falso):
-    return construir_servicio(llm=llm_falso, ruta_db=":memory:", cargar_datos_semilla=False)
+def aplicacion(llm_falso):
+    """Servicios, repositorios, bitácora y orquestador (para pruebas que necesitan los internos)."""
+    return construir_aplicacion(llm=llm_falso, ruta_db=":memory:", cargar_datos_semilla=False)
 
 
 @pytest.fixture
-def donante(servicio) -> Donante:
+def servicios(aplicacion):
+    return aplicacion.servicios
+
+
+@pytest.fixture
+def repos(aplicacion):
+    return aplicacion.repos
+
+
+@pytest.fixture
+def coordinador() -> Actor:
+    return Actor(rol=Rol.COORDINADOR)
+
+
+@pytest.fixture
+def actor_de():
+    """actor_de(participante) -> el Actor con el que ese participante usa los servicios."""
+    return lambda p: Actor(rol=p.rol, participante_id=p.id)
+
+
+@pytest.fixture
+def donante(servicios, coordinador) -> Donante:
     d = Donante(
         id="don-prueba",
         nombre="Fonda de Prueba",
         ubicacion=Ubicacion(lat=20.6741, lon=-103.3404),
         hora_cierre="18:00",
     )
-    servicio.registrar_participante(d)
+    servicios.participantes.registrar(coordinador, d)
     return d
 
 
 @pytest.fixture
-def receptores(servicio) -> list[Receptor]:
+def receptores(servicios, coordinador) -> list[Receptor]:
     lista = [
         Receptor(  # cerca, sin refrigeración
             id="rec-cerca",
@@ -55,12 +77,12 @@ def receptores(servicio) -> list[Receptor]:
         ),
     ]
     for r in lista:
-        servicio.registrar_participante(r)
+        servicios.participantes.registrar(coordinador, r)
     return lista
 
 
 @pytest.fixture
-def recolector(servicio) -> Recolector:
+def recolector(servicios, coordinador) -> Recolector:
     r = Recolector(id="vol-prueba", nombre="Voluntario de Prueba", ubicacion=Ubicacion(lat=20.67, lon=-103.34))
-    servicio.registrar_participante(r)
+    servicios.participantes.registrar(coordinador, r)
     return r

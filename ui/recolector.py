@@ -4,36 +4,36 @@ import pandas as pd
 import streamlit as st
 
 from rescate.dominio.enums import EstadoDonativo as E
-from rescate.dominio.modelos import Participante, Recolector, ahora
+from rescate.dominio.modelos import Actor, Recolector, ahora
 from rescate.herramientas.geo import haversine_km
 from rescate.herramientas.horario import limite_recoleccion
-from rescate.servicios import ErrorServicio, ServicioDonativos
+from rescate.servicios import ErrorServicio, Servicios
 from ui.comun import tarjeta_donativo
 
 
-def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> None:
+def mostrar(servicios: Servicios, actor: Actor | None) -> None:
     """Coordina el traslado y consulta las entregas del voluntario."""
     st.header("Recolecciones")
-    if participante is None:
+    if actor is None or not actor.participante_id:
         st.info("Elige un recolector en la barra lateral.")
         return
-    participante = servicio.participante(participante.id)
+    participante = servicios.participantes.obtener(actor.participante_id)
     if not isinstance(participante, Recolector):
         st.warning("El recolector ya no está disponible. Elige otro participante.")
         return
     if "recolector_aviso" in st.session_state:
         st.success(st.session_state.pop("recolector_aviso"))
-    propios = servicio.donativos_de_recolector(participante.id)
+    propios = servicios.distribucion.donativos_de_recolector(actor)
     tabs = st.tabs(["Listos para recoger", "En curso", "Historial"])
     with tabs[0]:
-        disponibles = servicio.disponibles_para_recolectar()
+        disponibles = servicios.distribucion.disponibles_para_recolectar(actor)
         if not disponibles:
             st.info("No hay donativos aceptados esperando recolección.")
         for d in disponibles:
-            tarjeta_donativo(servicio, d, mostrar_bitacora=False)
+            tarjeta_donativo(servicios, actor, d, mostrar_bitacora=False)
             origen, destino = (
-                servicio.participante(d.donante_id),
-                servicio.participante(d.receptor_id),
+                servicios.participantes.obtener(d.donante_id),
+                servicios.participantes.obtener(d.receptor_id),
             )
             if not origen or not destino:
                 st.warning("Falta un participante. Consulta al coordinador.")
@@ -72,7 +72,7 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
                 disabled=vencido or not participante.disponible,
             ):
                 try:
-                    servicio.iniciar_recoleccion(d.id, participante.id)
+                    servicios.distribucion.iniciar_recoleccion(actor, d.id)
                     st.session_state.recolector_aviso = "Recolección iniciada."
                     st.rerun()
                 except ErrorServicio as exc:
@@ -81,12 +81,12 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
         for d in propios:
             if d.estado != E.EN_RECOLECCION:
                 continue
-            tarjeta_donativo(servicio, d, mostrar_bitacora=False)
+            tarjeta_donativo(servicios, actor, d, mostrar_bitacora=False)
             for condicion in d.dictamen.condiciones if d.dictamen else []:
                 st.warning(condicion)
             if st.button("Entregado", key=f"recolector_entregar_{d.id}"):
                 try:
-                    servicio.confirmar_entrega(d.id, participante.id)
+                    servicios.distribucion.confirmar_entrega(actor, d.id)
                     st.session_state.recolector_aviso = "Entrega registrada."
                     st.rerun()
                 except ErrorServicio as exc:
@@ -95,4 +95,4 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
         entregados = [d for d in propios if d.estado == E.ENTREGADO]
         st.metric("Kg entregados", sum(d.kg_totales for d in entregados))
         for d in entregados:
-            tarjeta_donativo(servicio, d, mostrar_bitacora=False)
+            tarjeta_donativo(servicios, actor, d, mostrar_bitacora=False)

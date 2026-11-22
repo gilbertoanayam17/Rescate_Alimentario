@@ -8,8 +8,8 @@ from __future__ import annotations
 import streamlit as st
 
 from rescate.dominio.enums import Dictamen, EstadoDonativo, TipoEntradaBitacora
-from rescate.dominio.modelos import Donativo, EntradaBitacora
-from rescate.servicios import ServicioDonativos
+from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora
+from rescate.servicios import Servicios
 
 ETIQUETA_ESTADO = {
     EstadoDonativo.PUBLICADO: ("Publicado", "gray"),
@@ -47,11 +47,13 @@ def insignia_dictamen(dictamen: Dictamen) -> str:
     return f":{color}[**{texto}**]"
 
 
-def tarjeta_donativo(servicio: ServicioDonativos, donativo: Donativo, mostrar_bitacora: bool = True) -> None:
+def tarjeta_donativo(
+    servicios: Servicios, actor: Actor, donativo: Donativo, mostrar_bitacora: bool = True
+) -> None:
     """Resumen de un donativo: alimentos, estado, dictamen, asignación y bitácora."""
     with st.container(border=True):
         st.markdown(f"**{donativo.resumen()}**  {insignia_estado(donativo.estado)}")
-        donante = servicio.participante(donativo.donante_id)
+        donante = servicios.participantes.obtener(donativo.donante_id)
         st.caption(
             f"{donante.nombre if donante else donativo.donante_id} · {donativo.kg_totales} kg · "
             f"publicado {donativo.creado:%d/%m %H:%M} · id {donativo.id}"
@@ -65,14 +67,14 @@ def tarjeta_donativo(servicio: ServicioDonativos, donativo: Donativo, mostrar_bi
                 st.caption("Fundamento: " + "; ".join(d.reglas_citadas))
         if donativo.asignacion:
             a = donativo.asignacion
-            receptor = servicio.participante(a.receptor_id)
+            receptor = servicios.participantes.obtener(a.receptor_id)
             if receptor:
                 aceptada = " (aceptado)" if a.aceptada else " (por confirmar)"
                 st.markdown(f"Receptor: **{receptor.nombre}**{aceptada}")
             st.caption(a.justificacion)
         if mostrar_bitacora:
             with st.expander("¿Cómo lo decidieron los agentes?"):
-                vista_bitacora(servicio.bitacora_de(donativo.id))
+                vista_bitacora(servicios.reportes.bitacora_de(actor, donativo.id))
 
 
 def vista_bitacora(entradas: list[EntradaBitacora]) -> None:
@@ -84,7 +86,7 @@ def vista_bitacora(entradas: list[EntradaBitacora]) -> None:
         st.markdown(f"{icono} **{e.agente}** · _{e.tipo.value}_ — {e.contenido}")
 
 
-def historial_estados(servicio: ServicioDonativos, donativo_id: str) -> None:
-    for h in servicio.historial(donativo_id):
+def historial_estados(servicios: Servicios, actor: Actor, donativo_id: str) -> None:
+    for h in servicios.reportes.historial(actor, donativo_id):
         anterior = h["anterior"] or "—"
         st.caption(f"{h['fecha']:%d/%m %H:%M} · {anterior} → {h['nuevo']} ({h['evento']}) {h['motivo'] or ''}")
