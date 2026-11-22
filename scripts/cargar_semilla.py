@@ -33,7 +33,7 @@ def main() -> None:
     con = conectar(config.ruta_db)
     participantes = ParticipantesDuckDB(con)
     total = cargar_semilla(participantes, config.ruta_semilla)
-    servicio = ServicioParticipantes(participantes, DonativosDuckDB(con), pin_demo=config.pin_demo)
+    servicio = ServicioParticipantes(participantes, DonativosDuckDB(con))
     con_pin = servicio.asignar_pin_faltante(config.pin_demo)
     con.close()
     print(f"{total} participantes cargados en {config.ruta_db}; {con_pin} recibieron el PIN de la demo")

@@ -86,7 +86,7 @@ def test_pin_del_coordinador(servicios):
 def test_bloqueo_tras_cinco_fallos(repos):
     momento = {"ahora": datetime(2026, 11, 23, 12, 0)}
     servicio = ServicioParticipantes(
-        repos.participantes, repos.donativos, pin_demo="1234", reloj=lambda: momento["ahora"]
+        repos.participantes, repos.donativos, reloj=lambda: momento["ahora"]
     )
     servicio.registrar(
         Actor(rol=Rol.COORDINADOR), Donante(id="don-b", nombre="Fonda", ubicacion=CENTRO), pin="2468"
@@ -103,7 +103,7 @@ def test_bloqueo_tras_cinco_fallos(repos):
 def test_los_fallos_viejos_no_cuentan(repos):
     momento = {"ahora": datetime(2026, 11, 23, 12, 0)}
     servicio = ServicioParticipantes(
-        repos.participantes, repos.donativos, pin_demo="1234", reloj=lambda: momento["ahora"]
+        repos.participantes, repos.donativos, reloj=lambda: momento["ahora"]
     )
     for _ in range(4):
         with pytest.raises(ErrorAutorizacion):
@@ -114,13 +114,34 @@ def test_los_fallos_viejos_no_cuentan(repos):
     assert servicio.sesion_coordinador("0000").rol == Rol.COORDINADOR
 
 
-def test_participante_de_la_semilla_entra_con_el_pin_demo(servicios, repos, donante):
+def test_sin_pin_no_se_entra_ni_con_el_pin_demo(servicios, repos, donante):
     assert donante.pin_hash == ""
-    with pytest.raises(ErrorAutorizacion):
-        servicios.participantes.iniciar_sesion(donante.id, "9999")
-    assert servicios.participantes.iniciar_sesion(donante.id, "1234").participante_id == donante.id
-    guardado = repos.participantes.obtener(donante.id).pin_hash
-    assert guardado.startswith("pbkdf2$") and verificar_pin("1234", guardado)
+    for pin in ("1234", "0000", ""):
+        with pytest.raises(ErrorAutorizacion, match="no tiene PIN; pídelo al coordinador"):
+            servicios.participantes.iniciar_sesion(donante.id, pin)
+    assert repos.participantes.obtener(donante.id).pin_hash == ""  # nadie le asigna uno al vuelo
+
+
+def test_el_coordinador_le_asigna_pin_a_un_participante_existente(servicios, coordinador, repos, donante):
+    servicios.participantes.registrar(coordinador, repos.participantes.obtener(donante.id), pin="8642")
+    assert servicios.participantes.iniciar_sesion(donante.id, "8642").participante_id == donante.id
+
+
+def test_cargar_semilla_asigna_el_pin_demo(tmp_path, monkeypatch):
+    import sys
+
+    from rescate.persistencia.db import conectar
+    from rescate.persistencia.repositorios import ParticipantesDuckDB
+    from scripts import cargar_semilla
+
+    monkeypatch.setenv("RUTA_DB", str(tmp_path / "semilla.duckdb"))
+    monkeypatch.setenv("PIN_DEMO", "5678")
+    monkeypatch.setattr(sys, "argv", ["cargar_semilla.py"])
+    cargar_semilla.main()
+    con = conectar(tmp_path / "semilla.duckdb")
+    personas = ParticipantesDuckDB(con).listar()
+    con.close()
+    assert len(personas) == 15 and all(verificar_pin("5678", p.pin_hash) for p in personas)
 
 
 def test_asignar_pin_faltante(servicios, repos, donante, con_pin):
@@ -201,3 +222,24 @@ def test_entrada_del_coordinador(servicios):
 def test_sin_participantes_del_rol(servicios):
     app = entrada(servicios)  # base vacía
     assert any("No hay participantes" in w.value for w in app.warning)
+
+
+def test_coordinador_asigna_pin_desde_la_pagina(aplicacion, servicios, donante):
+    from streamlit.testing.v1 import AppTest
+
+    app = AppTest.from_string(
+        "import streamlit as st\n"
+        "from ui import coordinador\n"
+        "coordinador.mostrar(st.session_state['prueba_servicios'], st.session_state['prueba_actor'])\n",
+        default_timeout=30,
+    )
+    app.session_state["prueba_servicios"] = servicios
+    app.session_state["prueba_actor"] = Actor(rol=Rol.COORDINADOR)
+    app.run()
+    app.text_input(key="coordinador_pin_nuevo").input("12")
+    next(b for b in app.button if b.label == "Asignar PIN").click().run()
+    assert any("4 a 8" in e.value for e in app.error)
+    app.text_input(key="coordinador_pin_nuevo").input("9753")
+    next(b for b in app.button if b.label == "Asignar PIN").click().run()
+    assert not app.exception
+    assert servicios.participantes.iniciar_sesion(donante.id, "9753").participante_id == donante.id
