@@ -48,6 +48,12 @@ python -m streamlit run app.py
 Abre http://localhost:8501. Detén la app con Ctrl+C antes de cambiar el modo,
 indexar el conocimiento o ejecutar scripts sobre la misma base.
 
+**Inicio de sesión.** Elige tu rol y tu nombre y escribe el PIN. En la demo, los
+participantes de `datos/semilla.json` entran con `PIN_DEMO` (por omisión `1234`) y el
+coordinador con `PIN_COORDINADOR` (por omisión `0000`); los dos se cambian en `.env`.
+Para cargar un año de historial (tablero de impacto y pronósticos), con Streamlit detenido:
+`python scripts/generar_historial.py`.
+
 Para usar Ollama, revisa `ollama list`. Configura `MODELO_LLM` con un nombre
 instalado y `USAR_LLM_FALSO=0` en `.env`. Si hace falta descargar modelos:
 
