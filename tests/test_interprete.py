@@ -254,7 +254,7 @@ def _medidor():
 
 def test_frases_de_evaluacion_bien_formadas():
     datos = _medidor().cargar_frases()
-    assert len(datos["frases"]) == 20
+    assert len(datos["frases"]) == 50
     for frase in datos["frases"]:
         esperado = frase["esperado"]
         assert isinstance(esperado["completo"], bool)
@@ -282,4 +282,4 @@ def test_calificar_detecta_cada_campo():
 
 def test_medidor_corre_sin_ollama_con_las_reglas(llm_falso):
     aciertos, total, filas = _medidor().evaluar(llm_falso, _medidor().cargar_frases())
-    assert len(filas) == 20 and 0 < aciertos < total
+    assert len(filas) == 50 and 0 < aciertos < total

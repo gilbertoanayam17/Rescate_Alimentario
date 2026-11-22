@@ -129,6 +129,209 @@
         {"nombre": ["pan"], "cantidad": 2, "unidad": "bolsa", "tipo": ["panaderia", "abarrote"]},
         {"nombre": ["yogur", "yoghurt", "yogurt"], "cantidad": 1, "unidad": "litro", "tipo": "lacteo", "conservacion": "refrigerado"}
       ], "hora_preparacion": "18:00"}
+    },
+    {
+      "texto": "Me sobraron 8 órdenes de chilaquiles que hice hace 3 horas, están en el mostrador",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["chilaquil"], "cantidad": 8, "unidad": "porcion", "tipo": "preparado", "conservacion": "ambiente"}
+      ], "hora_preparacion": "14:00"}
+    },
+    {
+      "texto": "tengo 2 kilos de carne asada calientita, la hice hace 30 minutos",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["carne asada", "carne"], "cantidad": 2, "unidad": "kg", "tipo": "preparado", "conservacion": "caliente"}
+      ], "hora_preparacion": "16:30"}
+    },
+    {
+      "texto": "10 bolsas de tortillas de maíz",
+      "comercio": "tortillería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["tortilla"], "cantidad": 10, "unidad": "bolsa", "tipo": "panaderia"}
+      ]}
+    },
+    {
+      "texto": "3 kg de zanahoria y 2 kg de papa",
+      "comercio": "puesto de mercado",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["zanahoria"], "cantidad": 3, "unidad": "kg", "tipo": "fruta_verdura"},
+        {"nombre": ["papa"], "cantidad": 2, "unidad": "kg", "tipo": "fruta_verdura"}
+      ]}
+    },
+    {
+      "texto": "una caja de jugos de naranja cerrados",
+      "comercio": "tienda de abarrotes",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["jugo"], "cantidad": 1, "unidad": "caja", "tipo": ["bebida", "abarrote"]}
+      ]}
+    },
+    {
+      "texto": "6 refrescos cerrados",
+      "comercio": "tienda de abarrotes",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["refresco"], "cantidad": 6, "unidad": "pieza", "tipo": ["bebida", "abarrote"]}
+      ]}
+    },
+    {
+      "texto": "Tengo 4 litros de caldo de res, lo tengo en el refri desde las 11",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["caldo"], "cantidad": 4, "unidad": "litro", "tipo": "preparado", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "11:00"}
+    },
+    {
+      "texto": "5 kg de frijol en bolsa cerrada",
+      "comercio": "tienda de abarrotes",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["frijol"], "cantidad": 5, "unidad": "kg", "tipo": "abarrote"}
+      ]}
+    },
+    {
+      "texto": "15 tacos de canasta que hice a las 9 de la mañana, siguen calientitos",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["taco"], "cantidad": 15, "unidad": "pieza", "tipo": "preparado", "conservacion": "caliente"}
+      ], "hora_preparacion": "09:00"}
+    },
+    {
+      "texto": "2 kg de pescado crudo congelado",
+      "comercio": "pescadería",
+      "esperado": {"completo": false, "alimentos": [
+        {"nombre": ["pescado"], "cantidad": 2, "unidad": "kg", "tipo": "carne_pescado", "conservacion": "congelado"}
+      ], "hora_preparacion": null}
+    },
+    {
+      "texto": "Tengo 3 litros de leche en el refri",
+      "comercio": "cremería",
+      "esperado": {"completo": false, "alimentos": [
+        {"nombre": ["leche"], "cantidad": 3, "unidad": "litro", "tipo": "lacteo", "conservacion": "refrigerado"}
+      ], "hora_preparacion": null}
+    },
+    {
+      "texto": "Tengo 3 litros de leche en el refri\nAclaración del donante: la compré hoy a las 7 de la mañana",
+      "comercio": "cremería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["leche"], "cantidad": 3, "unidad": "litro", "tipo": "lacteo", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "07:00"}
+    },
+    {
+      "texto": "Me sobró medio kilo de crema y 1 kg de queso oaxaca, están en el refri desde las 9",
+      "comercio": "cremería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["crema"], "cantidad": 0.5, "unidad": "kg", "tipo": "lacteo", "conservacion": "refrigerado"},
+        {"nombre": ["queso", "oaxaca"], "cantidad": 1, "unidad": "kg", "tipo": "lacteo", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "09:00"}
+    },
+    {
+      "texto": "unas 40 galletas de avena",
+      "comercio": "panadería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["galleta"], "cantidad": 40, "unidad": "pieza", "tipo": "panaderia"}
+      ]}
+    },
+    {
+      "texto": "2 pasteles completos de chocolate",
+      "comercio": "pastelería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["pastel"], "cantidad": 2, "unidad": "pieza", "tipo": "panaderia"}
+      ]}
+    },
+    {
+      "texto": "tengo como 5 kilos de sandía y 3 piñas",
+      "comercio": "puesto de mercado",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["sandia"], "cantidad": 5, "unidad": "kg", "tipo": "fruta_verdura"},
+        {"nombre": ["pina"], "cantidad": 3, "unidad": "pieza", "tipo": "fruta_verdura"}
+      ]}
+    },
+    {
+      "texto": "Hice arroz rojo a las 12 y me sobraron como 2 kilos, lo dejé en la estufa calientito",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["arroz"], "cantidad": 2, "unidad": "kg", "tipo": "preparado", "conservacion": "caliente"}
+      ], "hora_preparacion": "12:00"}
+    },
+    {
+      "texto": "3 charolas de enchiladas verdes, las hice hace una hora y media y están afuera",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["enchilada"], "cantidad": 3, "unidad": "charola", "tipo": "preparado", "conservacion": "ambiente"}
+      ], "hora_preparacion": "15:30"}
+    },
+    {
+      "texto": "10 kg de naranjas un poco golpeadas",
+      "comercio": "puesto de mercado",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["naranja"], "cantidad": 10, "unidad": "kg", "tipo": "fruta_verdura"}
+      ]}
+    },
+    {
+      "texto": "2 kg de lentejas cocidas en el refri, las hice ayer a las 8 de la noche",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["lenteja"], "cantidad": 2, "unidad": "kg", "tipo": "preparado", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "20:00"}
+    },
+    {
+      "texto": "me sobraron 12 bolillos y 6 teleras de ayer",
+      "comercio": "panadería",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["bolillo"], "cantidad": 12, "unidad": "pieza", "tipo": "panaderia"},
+        {"nombre": ["telera"], "cantidad": 6, "unidad": "pieza", "tipo": "panaderia"}
+      ]}
+    },
+    {
+      "texto": "1 garrafón de agua cerrado",
+      "comercio": "tienda de abarrotes",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["agua", "garrafon"], "cantidad": 1, "unidad": "pieza", "tipo": ["bebida", "abarrote"]}
+      ]}
+    },
+    {
+      "texto": "15 porciones de espagueti que hice a la 1, siguen calientes",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["espagueti", "spaghetti", "espaguetti"], "cantidad": 15, "unidad": "porcion", "tipo": "preparado", "conservacion": "caliente"}
+      ], "hora_preparacion": "13:00"}
+    },
+    {
+      "texto": "tenemos 3 kilos de picadillo en el refri",
+      "esperado": {"completo": false, "alimentos": [
+        {"nombre": ["picadillo"], "cantidad": 3, "unidad": "kg", "tipo": "preparado", "conservacion": "refrigerado"}
+      ], "hora_preparacion": null}
+    },
+    {
+      "texto": "tenemos 3 kilos de picadillo en el refri\nAclaración del donante: lo hicimos hace 4 horas",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["picadillo"], "cantidad": 3, "unidad": "kg", "tipo": "preparado", "conservacion": "refrigerado"}
+      ], "hora_preparacion": "13:00"}
+    },
+    {
+      "texto": "Tengo 2 charolas de tinga y 20 tostadas",
+      "esperado": {"completo": false, "alimentos": [
+        {"nombre": ["tinga"], "cantidad": 2, "unidad": "charola", "tipo": "preparado", "conservacion": "desconocida"},
+        {"nombre": ["tostada"], "cantidad": 20, "unidad": "pieza", "tipo": ["panaderia", "abarrote"]}
+      ], "hora_preparacion": null}
+    },
+    {
+      "texto": "Tengo 2 charolas de tinga y 20 tostadas\nAclaración del donante: la tinga la hice a las 11 y está en el refri",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["tinga"], "cantidad": 2, "unidad": "charola", "tipo": "preparado", "conservacion": "refrigerado"},
+        {"nombre": ["tostada"], "cantidad": 20, "unidad": "pieza", "tipo": ["panaderia", "abarrote"]}
+      ], "hora_preparacion": "11:00"}
+    },
+    {
+      "texto": "5 litros de atole de vainilla calientito, lo hice a las 6 de la mañana",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["atole"], "cantidad": 5, "unidad": "litro", "tipo": ["bebida", "preparado"], "conservacion": "caliente"}
+      ], "hora_preparacion": "06:00"}
+    },
+    {
+      "texto": "8 tortas ahogadas que hice hace 2 horas, están calientitas",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["torta"], "cantidad": 8, "unidad": "pieza", "tipo": "preparado", "conservacion": "caliente"}
+      ], "hora_preparacion": "15:00"}
+    },
+    {
+      "texto": "un par de kilos de aguacate y 1 kg de cebolla",
+      "comercio": "puesto de mercado",
+      "esperado": {"completo": true, "alimentos": [
+        {"nombre": ["aguacate"], "cantidad": 2, "unidad": "kg", "tipo": "fruta_verdura"},
+        {"nombre": ["cebolla"], "cantidad": 1, "unidad": "kg", "tipo": "fruta_verdura"}
+      ]}
     }
   ]
 }
