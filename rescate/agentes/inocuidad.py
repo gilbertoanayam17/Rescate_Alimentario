@@ -9,24 +9,46 @@ DUEÑO: Gilberto (flujo 1).
 4. Combina en código: el dictamen más estricto, la vida útil de las reglas y solo las citas
    que vienen de los fragmentos recuperados (defensa contra numerales inventados).
 
+Los nombres, observaciones y el mensaje del donante son texto de usuario: van limpios y
+delimitados en `<datos_donativo>`, y el prompt de sistema dice que son solo datos.
+
 No cambies la firma del constructor ni de `ejecutar` (solo se agregan parámetros opcionales).
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable
 
 from pydantic import BaseModel
 
 from rescate.agentes.base import Agente
-from rescate.agentes.reglas_inocuidad import Hallazgo, combinar, crear_cadena, horas_desde
+from rescate.agentes.reglas_inocuidad import (
+    Hallazgo,
+    combinar,
+    crear_cadena,
+    horas_desde,
+)
+from rescate.agentes.seguridad_prompt import (
+    REGLA_DATOS,
+    delimitar,
+    limpiar_texto_usuario,
+)
 from rescate.bitacora import Bitacora
-from rescate.dominio.enums import PERECEDEROS, Conservacion, Dictamen, TipoEntradaBitacora
+from rescate.dominio.enums import (
+    PERECEDEROS,
+    Conservacion,
+    Dictamen,
+    TipoEntradaBitacora,
+)
 from rescate.dominio.modelos import DictamenInocuidad, Donativo, ahora
 from rescate.llm.cliente import ClienteLLM, ErrorLLM
-from rescate.rag.base_conocimiento import BaseConocimiento, BaseConocimientoVacia, Fragmento
+from rescate.rag.base_conocimiento import (
+    BaseConocimiento,
+    BaseConocimientoVacia,
+    Fragmento,
+)
 
 
 class EvaluacionLLM(BaseModel):
@@ -56,7 +78,8 @@ preliminares ya se incluyen; escribe solo condiciones nuevas y distintas (máxim
 - citas: copia solo el texto de "Sección:" de los fragmentos que fundamenten tu dictamen, tal como \
 viene; si ninguno aplica, deja la lista vacía. No inventes numerales.
 - Las horas, los kilos y la vida útil ya los calculó el sistema: no los recalcules.
-"""
+- {regla_datos}
+""".replace("{regla_datos}", REGLA_DATOS.format(etiqueta="datos_donativo"))
 
 FRASE_CONSERVACION = {
     Conservacion.REFRIGERADO: "en refrigeración",
@@ -305,14 +328,17 @@ class AgenteInocuidad(Agente[Donativo, DictamenInocuidad]):
         reglas: DictamenInocuidad,
         fragmentos: list[Fragmento],
     ) -> str:
-        lineas = ["Alimentos:"]
+        datos = ["Alimentos:"]
         for a in donativo.alimentos:
-            obs = f", observaciones: {a.observaciones}" if a.observaciones else ""
+            observaciones = limpiar_texto_usuario(a.observaciones, maximo=200).replace("\n", " ")
+            obs = f", observaciones: {observaciones}" if observaciones else ""
             riesgo = "perecedero" if a.tipo in PERECEDEROS else "no perecedero, bajo riesgo"
-            lineas.append(
-                f"- {a.nombre}: {a.cantidad:g} {a.unidad}, tipo {a.tipo.value} ({riesgo}), "
-                f"conservación {a.conservacion.value}{obs}"
+            datos.append(
+                f"- {limpiar_texto_usuario(a.nombre, maximo=80)}: {a.cantidad:g} {a.unidad}, "
+                f"tipo {a.tipo.value} ({riesgo}), conservación {a.conservacion.value}{obs}"
             )
+        datos.append(f"Mensaje original del donante: {limpiar_texto_usuario(donativo.texto_original)}")
+        lineas = [delimitar("datos_donativo", "\n".join(datos))]
         horas = horas_desde(donativo.hora_preparacion, momento)
         if horas is None:
             lineas.append("Hora de preparación: desconocida")
@@ -320,7 +346,6 @@ class AgenteInocuidad(Agente[Donativo, DictamenInocuidad]):
             lineas.append(
                 f"Hora de preparación: {donativo.hora_preparacion:%H:%M} (hace {round(horas, 1):g} h, calculado por el sistema)"
             )
-        lineas.append(f"Mensaje original del donante: {donativo.texto_original}")
         lineas.append("")
         lineas.append(f"Dictamen preliminar de las reglas: {reglas.dictamen.value}")
         lineas.append(f"Motivo preliminar: {reglas.motivo}")
