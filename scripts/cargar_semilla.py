@@ -4,6 +4,8 @@ Uso:
     python scripts/cargar_semilla.py              # agrega/actualiza participantes
     python scripts/cargar_semilla.py --reiniciar  # borra la base y empieza de cero
 
+Los participantes sin PIN reciben PIN_DEMO del .env (por omisión 1234).
+
 DUEÑO: Alejandro (tarea A1).
 """
 import argparse
@@ -14,8 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from rescate.config import cargar_configuracion  # noqa: E402
 from rescate.persistencia.db import conectar  # noqa: E402
-from rescate.persistencia.repositorios import ParticipantesDuckDB  # noqa: E402
+from rescate.persistencia.repositorios import DonativosDuckDB, ParticipantesDuckDB  # noqa: E402
 from rescate.semilla import cargar_semilla  # noqa: E402
+from rescate.servicios.participantes import ServicioParticipantes  # noqa: E402
 
 
 def main() -> None:
@@ -28,9 +31,12 @@ def main() -> None:
         Path(config.ruta_db).unlink()
         print(f"Base borrada: {config.ruta_db}")
     con = conectar(config.ruta_db)
-    total = cargar_semilla(ParticipantesDuckDB(con), config.ruta_semilla)
+    participantes = ParticipantesDuckDB(con)
+    total = cargar_semilla(participantes, config.ruta_semilla)
+    servicio = ServicioParticipantes(participantes, DonativosDuckDB(con), pin_demo=config.pin_demo)
+    con_pin = servicio.asignar_pin_faltante(config.pin_demo)
     con.close()
-    print(f"{total} participantes cargados en {config.ruta_db}")
+    print(f"{total} participantes cargados en {config.ruta_db}; {con_pin} recibieron el PIN de la demo")
 
 
 if __name__ == "__main__":
