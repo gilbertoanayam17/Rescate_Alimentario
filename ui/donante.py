@@ -24,6 +24,7 @@ from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora, Participan
 from rescate.servicios import ErrorServicio, Servicios
 from ui.componentes_prediccion import frase_sugerida, tarjeta_pronostico
 from ui.comun import (
+    boton_constancia,
     historial_estados,
     insignia_dictamen,
     metricas_impacto,
@@ -299,6 +300,8 @@ def _donativo(servicios: Servicios, actor: Actor, donativo: Donativo) -> None:
     """Una tarjeta de "Mis donativos" con sus acciones. La constancia en PDF (tarea A4) va aquí,
     junto a los botones de cada donativo entregado."""
     tarjeta_donativo(servicios, actor, donativo)
+    if donativo.estado == EstadoDonativo.ENTREGADO:
+        boton_constancia(servicios, actor, donativo, "donante")
     with st.expander("Historial de estados"):
         historial_estados(servicios, actor, donativo.id)
     aceptado = bool(donativo.asignacion and donativo.asignacion.aceptada)

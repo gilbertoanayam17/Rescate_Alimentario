@@ -129,3 +129,14 @@ def metricas_impacto(tablero: TableroImpacto) -> None:
     cols[2].metric("CO2e evitado (kg)", f"{r.co2e_kg:,.1f}")
     cols[3].metric("Donativos entregados", f"{r.donativos:,}")
     st.caption(tablero.fuentes)
+
+
+def boton_constancia(servicios: Servicios, actor: Actor, donativo: Donativo, prefijo: str) -> None:
+    """Descarga de la constancia de entrega (CAR-12). El PDF se genera al hacer clic."""
+    st.download_button(
+        "Descargar constancia (PDF)",
+        data=lambda: servicios.reportes.constancia_pdf(actor, donativo.id),
+        file_name=f"constancia_{donativo.id}.pdf",
+        mime="application/pdf",
+        key=f"{prefijo}_constancia_{donativo.id}",
+    )
