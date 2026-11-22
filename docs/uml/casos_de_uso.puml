@@ -1,0 +1,83 @@
+@startuml casos_de_uso
+' Diagrama de casos de uso (UML 2.5) de Rescate Alimentario, entrega final.
+!pragma layout smetana
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Donante\n(comercio)" as Donante
+actor "Receptor\n(comedor)" as Receptor
+actor "Recolector\n(voluntario)" as Recolector
+actor "Coordinador" as Coordinador
+actor "Sistema\n(agentes)" as Sistema <<sistema>>
+
+rectangle "Rescate Alimentario" {
+  usecase "CU-01 Iniciar y cerrar sesión" as CU01
+  usecase "CU-02 Publicar un excedente\nen lenguaje natural" as CU02
+  usecase "CU-03 Evaluar inocuidad\ny vida útil" as CU03
+  usecase "CU-04 Asignar receptor\ncon justificación" as CU04
+  usecase "CU-05 Aceptar o rechazar\nun donativo" as CU05
+  usecase "CU-06 Recibir y leer avisos" as CU06
+  usecase "CU-07 Consultar la ruta sugerida\ny tomar donativos" as CU07
+  usecase "CU-08 Confirmar la entrega" as CU08
+  usecase "CU-09 Descargar la constancia\nde entrega" as CU09
+  usecase "CU-10 Consultar pronósticos y\npublicar desde un pronóstico" as CU10
+  usecase "CU-11 Atender un caso escalado" as CU11
+  usecase "CU-12 Registrar, editar o\neliminar participantes" as CU12
+  usecase "CU-13 Consultar el tablero de impacto\ny descargar el reporte ESG" as CU13
+  usecase "CU-14 Consultar historial\ny bitácora" as CU14
+  usecase "CU-15 Cancelar un donativo" as CU15
+}
+
+Donante -- CU01
+Receptor -- CU01
+Recolector -- CU01
+Coordinador -- CU01
+
+Donante -- CU02
+Donante -- CU09
+Donante -- CU10
+Donante -- CU13
+Donante -- CU14
+Donante -- CU15
+
+Receptor -- CU05
+Receptor -- CU09
+Receptor -- CU10
+Receptor -- CU12
+Receptor -- CU13
+
+Recolector -- CU07
+Recolector -- CU08
+
+Coordinador -- CU09
+Coordinador -- CU11
+Coordinador -- CU12
+Coordinador -- CU13
+Coordinador -- CU14
+
+CU06 -- Donante
+CU06 -- Receptor
+CU06 -- Recolector
+CU06 -- Coordinador
+
+CU03 -- Sistema
+CU04 -- Sistema
+
+CU02 ..> CU03 : <<include>>
+CU02 ..> CU04 : <<include>>
+CU08 ..> CU07 : <<extend>>
+CU02 ..> CU06 : <<trigger>>
+CU05 ..> CU06 : <<trigger>>
+CU07 ..> CU06 : <<trigger>>
+CU08 ..> CU06 : <<trigger>>
+CU11 ..> CU06 : <<trigger>>
+CU15 ..> CU06 : <<trigger>>
+
+note bottom of CU06
+  Lo disparan los demás casos: cada cambio
+  de estado avisa a los involucrados
+  (Observer: BusEventos → NotificadorEstados).
+end note
+@enduml

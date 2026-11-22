@@ -1,0 +1,145 @@
+@startuml componentes
+' Diagrama de componentes (UML 2.5) de Rescate Alimentario, entrega final.
+!pragma layout smetana
+skinparam shadowing false
+skinparam componentStyle uml2
+
+package "Interfaz (Streamlit)" {
+  [app.py\n(inicio de sesión con PIN)] as App
+  [ui/donante · receptor ·\nrecolector · coordinador] as Paginas
+  [ui/comun · sesion ·\ncomponentes_prediccion] as ComunUI
+}
+
+package "rescate/servicios" {
+  interface "Servicios" as IServicios
+  [ServicioParticipantes] as SParticipantes
+  [ServicioPublicacion] as SPublicacion
+  [ServicioDistribucion] as SDistribucion
+  [ServicioReportes] as SReportes
+  [ServicioNotificaciones] as SNotificaciones
+  [ServicioCasos] as SCasos
+  [ServicioPrediccion] as SPrediccion
+  [CicloDeVida\n(State)] as Ciclo
+  [autorizacion] as Autorizacion
+  [BusEventos\n(Observer)] as Bus
+  [NotificadorEstados] as Notificador
+  interface "CanalAvisos" as ICanal
+  [AvisosEnApp] as AvisosEnApp
+}
+
+[MediadorCasos\n(Mediator)] as Mediador
+
+package "Orquestación y agentes" {
+  [Orquestador\n(LangGraph)] as Orquestador
+  [AgenteInterprete] as Interprete
+  [AgenteInocuidad] as Inocuidad
+  [AgenteAsignador\n(ReAct)] as Asignador
+  [AgenteLogistico] as Logistico
+  [AgentePredictor] as Predictor
+  [Bitacora] as Bitacora
+}
+
+package "rescate/herramientas" {
+  [geo · capacidad · horario · equidad ·\ncompatibilidad · puntuacion (Strategy)] as Herramientas
+  [rutas (Strategy)] as Rutas
+  [impacto] as Impacto
+  [patrones] as Patrones
+}
+
+package "rescate/documentos" {
+  [GeneradorDocumento\n(Template Method)] as Documentos
+}
+
+package "RAG" {
+  interface "BaseConocimiento" as IBase
+  [BaseConocimientoVectorial\n(FAISS)] as Vectorial
+}
+
+package "LLM" {
+  interface "ClienteLLM" as ILLM
+  [ClienteOllama] as Ollama
+  [ClienteLLMFalso] as Falso
+}
+
+node "Ollama local\n(gemma4:e4b ·\nnomic-embed-text)" as ServidorOllama
+
+package "Persistencia" {
+  interface "Repositorios" as IRepos
+  [ParticipantesDuckDB · DonativosDuckDB ·\nAvisosDuckDB · CasosDuckDB ·\nPronosticosDuckDB · BitacoraDuckDB] as DuckRepos
+}
+database "DuckDB\n(datos/rescate.duckdb)" as DuckDB
+
+[contenedor.py\n(raíz de composición)] as Contenedor
+
+App --> Paginas
+Paginas --> ComunUI
+Paginas ..> IServicios : usa con el Actor de la sesión
+App ..> IServicios
+IServicios - SParticipantes
+IServicios - SPublicacion
+IServicios - SDistribucion
+IServicios - SReportes
+IServicios - SNotificaciones
+IServicios - SCasos
+IServicios - SPrediccion
+
+SPublicacion --> Orquestador
+SDistribucion --> Orquestador
+SDistribucion --> Logistico
+SPublicacion --> Ciclo
+SDistribucion --> Ciclo
+SPublicacion --> Mediador
+SDistribucion --> Mediador
+SPublicacion ..> Autorizacion
+SDistribucion ..> Autorizacion
+SReportes ..> Autorizacion
+Ciclo --> Bus
+Bus --> Notificador
+Bus --> Mediador
+Notificador --> ICanal
+Mediador --> ICanal
+SPrediccion --> ICanal
+ICanal - AvisosEnApp
+SPrediccion --> Predictor
+SReportes --> Impacto
+SReportes --> Documentos
+Documentos --> Impacto
+
+Orquestador --> Interprete
+Orquestador --> Inocuidad
+Orquestador --> Asignador
+Asignador --> Herramientas
+Logistico --> Rutas
+Predictor --> Patrones
+Inocuidad --> IBase
+IBase - Vectorial
+Interprete --> Bitacora
+Inocuidad --> Bitacora
+Asignador --> Bitacora
+Logistico --> Bitacora
+Predictor --> Bitacora
+
+Interprete --> ILLM
+Inocuidad --> ILLM
+Asignador --> ILLM
+Logistico --> ILLM
+Predictor --> ILLM
+Vectorial --> ILLM : embeber
+ILLM - Ollama
+ILLM - Falso
+Ollama --> ServidorOllama
+
+SParticipantes --> IRepos
+SPublicacion --> IRepos
+SDistribucion --> IRepos
+SReportes --> IRepos
+SNotificaciones --> IRepos
+SCasos --> IRepos
+AvisosEnApp --> IRepos
+Mediador --> IRepos
+Bitacora --> IRepos
+IRepos - DuckRepos
+DuckRepos --> DuckDB
+
+Contenedor ..> IServicios : construir_servicios()
+@enduml

@@ -1,0 +1,69 @@
+@startuml secuencia_recoleccion
+' Secuencia: el receptor acepta → ruta sugerida → dos voluntarios intentan tomar (uno gana) → entrega → constancia.
+skinparam shadowing false
+autonumber
+actor Receptor
+actor "Iván\n(recolector)" as Ivan
+actor "Mariana\n(recolectora)" as Mariana
+participant "ui/<rol>" as UI
+participant ServicioDistribucion as SD
+participant AgenteLogistico as AL
+participant "EstrategiaRuta\n(VecinoMasCercano,\nPrimeroElMasUrgente)" as ER
+participant ClienteLLM as LLM
+participant DonativosDuckDB as Repo
+participant CicloDeVida as CV
+participant BusEventos as Bus
+participant ServicioReportes as SR
+participant ConstanciaEntrega as CE
+
+Receptor -> UI : Aceptar
+UI -> SD : aceptar(actor, donativo_id)
+SD -> SD : participante_del_actor(RECEPTOR)\nes el receptor asignado
+SD -> CV : registrar_aceptacion
+CV -> Bus : evento "aceptar"
+note right of Bus : NotificadorEstados avisa al donante\ny a los recolectores disponibles
+
+Ivan -> UI : Calcular ruta sugerida
+UI -> SD : ruta_sugerida(actor)
+SD -> AL : ejecutar(SolicitudRuta: lo que lleva + disponibles)
+AL -> AL : candidatos a ≤ 6 km hasta la capacidad del transporte
+AL -> ER : ordenar(origen, paradas, transporte, salida)
+ER --> AL : RutaCalculada × 2 (km, llegadas, retrasos)
+alt rutas distintas y las dos cumplen
+  AL -> LLM : generar_json(rutas delimitadas, DecisionRuta)
+  LLM --> AL : estrategia + explicación (validada)
+else iguales o solo una cumple
+  AL -> AL : elige sin LLM
+end
+AL --> SD : RutaRecoleccion
+SD --> UI : paradas, mapa y explicación
+
+par dos voluntarios a la vez
+  Ivan -> UI : Tomar estos donativos
+  UI -> SD : tomar_ruta(actor Iván, ids)
+  SD -> SD : iniciar_recoleccion(actor, id)
+  SD -> Repo : tomar_para_recoleccion(d)\nUPDATE … WHERE estado='asignado'\nAND recolector_id IS NULL
+  Repo --> SD : True (lo tomó)
+  SD -> CV : registrar_tomado → evento "iniciar_recoleccion"
+else
+  Mariana -> UI : Voy por él
+  UI -> SD : iniciar_recoleccion(actor Mariana, id)
+  SD -> Repo : tomar_para_recoleccion(d)
+  Repo --> SD : False
+  SD --> UI : ErrorServicio("Otro voluntario ya tomó este donativo.")
+end
+
+Ivan -> UI : Entregado
+UI -> SD : confirmar_entrega(actor, id)
+SD -> SD : solo el recolector que lo lleva
+SD -> CV : transicionar(ENTREGAR)
+CV -> Bus : evento "entregar"
+note right of Bus : avisos "Entregado. Ya puedes\ndescargar la constancia."
+
+Receptor -> UI : Descargar constancia (PDF)
+UI -> SR : constancia_pdf(actor, id)
+SR -> SR : donante, receptor o coordinador;\nsolo ENTREGADOS
+SR -> CE : generar()  (Template Method)
+CE --> SR : bytes del PDF
+SR --> UI : constancia_<id>.pdf
+@enduml
