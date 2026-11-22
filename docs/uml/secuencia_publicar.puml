@@ -1,0 +1,67 @@
+@startuml secuencia_publicar
+' Secuencia: el donante publica con una aclaración → Intérprete → Inocuidad → Asignador ReAct → avisos.
+skinparam shadowing false
+autonumber
+actor Donante
+participant "ui/donante" as UI
+participant ServicioPublicacion as SP
+participant Orquestador as O
+participant AgenteInterprete as AI
+participant AgenteInocuidad as AIN
+participant "BaseConocimiento\n(RAG NOM-251)" as RAG
+participant AgenteAsignador as AA
+participant "herramientas\n(compatibilidad, geo,\ncapacidad, horario,\nequidad, puntuación)" as H
+participant ClienteLLM as LLM
+participant CicloDeVida as CV
+participant BusEventos as Bus
+participant NotificadorEstados as N
+participant MediadorCasos as M
+
+Donante -> UI : "Me sobró pollo en mole"
+UI -> SP : publicar(actor, texto)
+SP -> SP : participante_del_actor(actor, DONANTE)\ncandado (cola por orden de llegada)
+SP -> O : procesar(solicitud, receptores)
+O -> AI : ejecutar(solicitud)
+AI -> AI : detectar_inyeccion · delimitar texto
+AI -> LLM : generar_json(prompt, InterpretacionLLM)
+LLM --> AI : alimentos, faltan datos
+AI --> O : completo = False, preguntas
+O --> SP : interpretacion
+SP --> UI : ResultadoPublicacion(completo=False, preguntas)
+UI --> Donante : "¿Cuántos kilos y a qué hora lo preparaste?"
+Donante -> UI : "Unos 4 kg, a las 2"
+UI -> SP : publicar(actor, texto + aclaración, mismo donativo_id)
+SP -> O : procesar(...)
+O -> AI : ejecutar(...)
+AI -> LLM : generar_json(...)
+AI -> AI : estimar_kg · validar conservación\ncon detectar_conservacion
+AI --> O : completo = True, alimentos
+O -> AIN : ejecutar(donativo)
+AIN -> AIN : cadena de reglas CI-01…CI-07\n(Chain of Responsibility)
+AIN -> RAG : buscar(consulta, k=4)
+RAG --> AIN : fragmentos NOM-251
+AIN -> LLM : generar_json(..., EvaluacionLLM)
+LLM --> AIN : dictamen y citas
+AIN -> AIN : solo puede endurecer el dictamen;\nfiltra citas inventadas
+AIN --> O : DictamenInocuidad(apto con condiciones)
+O -> AA : ejecutar(SolicitudAsignacion)
+AA -> H : evaluar_compatibilidad · Puntuador.clasificar
+H --> AA : 3 mejores candidatos
+loop ReAct: hasta 6 pasos
+  AA -> LLM : generar_json(historial delimitado, PasoReAct)
+  LLM --> AA : pensamiento + acción (distancia, capacidad, …)
+  AA -> H : herramienta de la acción
+  H --> AA : observación (código, no el LLM)
+end
+AA -> AA : finalizar: compatible, top 3 y con ventaja\n(si falla: selección de nivel 1 o mayor puntaje)
+AA --> O : Asignacion(receptor, justificación)
+O --> SP : estado del flujo
+SP -> CV : registrar_publicacion · transicionar(EVALUAR_APTO)\n· aplicar_asignacion(ASIGNAR)
+CV -> Bus : publicar(EventoDonativo "asignar")
+Bus -> N : al_ocurrir(evento)
+N -> N : aviso al receptor y al donante (CanalAvisos)
+Bus -> M : al_ocurrir(evento)
+M -> M : resuelve SIN_RECEPTOR si había
+SP --> UI : ResultadoPublicacion(completo=True)
+UI --> Donante : "¡Listo! Se asignó a Comedor Oblatos"
+@enduml

@@ -1,0 +1,241 @@
+@startuml clases_dominio
+' Diagrama de clases del dominio (UML 2.5): modelos, enums, estados (State) y repositorios.
+!pragma layout smetana
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "rescate.dominio.modelos" {
+  class Ubicacion {
+    lat: float
+    lon: float
+    direccion: str
+  }
+  abstract class Participante {
+    id: str
+    nombre: str
+    rol: Rol
+    telefono: str
+    pin_hash: str
+  }
+  class Donante {
+    tipo_comercio: str
+    hora_cierre: str
+  }
+  class Receptor {
+    tipos_aceptados: list[TipoAlimento]
+    capacidad_kg_dia: float
+    tiene_refrigeracion: bool
+    hora_apertura: str
+    hora_cierre: str
+    personas_atendidas: int
+  }
+  class Recolector {
+    zona: str
+    transporte: str
+    disponible: bool
+  }
+  class Actor <<frozen>> {
+    rol: Rol
+    participante_id: str | None
+  }
+  class Alimento {
+    nombre: str
+    cantidad: float
+    unidad: str
+    tipo: TipoAlimento
+    conservacion: Conservacion
+    kg_estimados: float
+  }
+  class DictamenInocuidad {
+    dictamen: Dictamen
+    motivo: str
+    condiciones: list[str]
+    vida_util_horas: float | None
+    requiere_refrigeracion: bool
+    reglas_citadas: list[str]
+    requiere_revision: bool
+  }
+  class Asignacion {
+    receptor_id: str | None
+    puntaje: float
+    justificacion: str
+    alternativas: list[str]
+    aceptada: bool
+    requiere_coordinador: bool
+    fecha: datetime
+  }
+  class Donativo {
+    id: str
+    donante_id: str
+    texto_original: str
+    hora_preparacion: datetime | None
+    recoger_antes_de: datetime | None
+    estado: EstadoDonativo
+    recolector_id: str | None
+    receptores_descartados: list[str]
+    creado: datetime
+    actualizado: datetime
+    + kg_totales: float
+    + receptor_id: str | None
+    + resumen(): str
+  }
+  class EventoDonativo {
+    donativo_id: str
+    evento: str
+    anterior: EstadoDonativo | None
+    nuevo: EstadoDonativo
+    motivo: str
+    fecha: datetime
+  }
+  class Aviso {
+    id: str
+    rol: Rol
+    destinatario_id: str | None
+    donativo_id: str | None
+    titulo: str
+    mensaje: str
+    leido: bool
+  }
+  class CasoEscalado {
+    id: str
+    tipo: TipoCaso
+    donativo_id: str | None
+    motivo: str
+    emisor: str
+    estado: EstadoCaso
+    resolucion: str
+  }
+  class Pronostico {
+    id: str
+    donante_id: str
+    fecha: date
+    tipo: TipoAlimento
+    descripcion: str
+    kg_esperados: float
+    confianza: float
+    mensaje: str
+    receptor_sugerido_id: str | None
+    estado: EstadoPronostico
+  }
+  class EntradaBitacora {
+    donativo_id: str | None
+    agente: str
+    paso: int
+    tipo: TipoEntradaBitacora
+    contenido: str
+    datos: dict
+  }
+}
+
+package "rescate.dominio.enums" {
+  enum Rol { DONANTE\nRECEPTOR\nRECOLECTOR\nCOORDINADOR }
+  enum EstadoDonativo { PUBLICADO\nEVALUADO\nASIGNADO\nEN_RECOLECCION\nENTREGADO\nRECHAZADO\nEXPIRADO\nCANCELADO }
+  enum Evento { EVALUAR_APTO\nEVALUAR_NO_APTO\nASIGNAR\nLIBERAR\nINICIAR_RECOLECCION\nENTREGAR\nEXPIRAR\nCANCELAR }
+  enum Dictamen { APTO\nAPTO_CON_CONDICIONES\nNO_APTO }
+  enum TipoAlimento { PREPARADO\nPANADERIA\nFRUTA_VERDURA\nLACTEO\nCARNE_PESCADO\nABARROTE\nBEBIDA\nOTRO }
+  enum TipoCaso { SIN_RECEPTOR\nPOSIBLE_INYECCION\nINTERPRETACION_CORREGIDA\nINOCUIDAD_DUDOSA\nRECOLECCION_VENCIDA\nRECHAZOS_REPETIDOS }
+}
+
+package "rescate.dominio.estados (State)" {
+  abstract class EstadoBase {
+    nombre: EstadoDonativo
+    transiciones: dict[Evento, EstadoDonativo]
+    + siguiente(evento): EstadoDonativo
+    + eventos_permitidos(): list[Evento]
+    + es_final(): bool
+  }
+  class Publicado
+  class Evaluado
+  class Asignado
+  class EnRecoleccion
+  class Entregado
+  class Rechazado
+  class Expirado
+  class Cancelado
+  class TransicionInvalida <<exception>>
+}
+
+package "rescate.persistencia (Repository)" {
+  interface RepositorioParticipantes {
+    + guardar(p)
+    + obtener(id): Participante | None
+    + listar(rol): list[Participante]
+    + eliminar(id)
+  }
+  interface RepositorioDonativos {
+    + guardar(d)
+    + obtener(id): Donativo | None
+    + listar(estado): list[Donativo]
+    + registrar_transicion(...)
+    + historial(id): list[dict]
+    + tomar_para_recoleccion(d): bool
+  }
+  interface RepositorioAvisos {
+    + agregar(a)
+    + de_destinatario(rol, id): list[Aviso]
+    + marcar_leido(id, rol, dest): bool
+  }
+  interface RepositorioCasos {
+    + guardar(c)
+    + abiertos(): list[CasoEscalado]
+    + abierto_de(tipo, donativo_id)
+    + de_donativo(id)
+  }
+  interface RepositorioPronosticos {
+    + guardar(p)
+    + de_donante(id, desde)
+    + de_receptor(id, desde)
+    + del_dia(fecha)
+  }
+  interface RepositorioBitacora {
+    + agregar(e)
+    + de_donativo(id)
+    + recientes(limite)
+  }
+  class ParticipantesDuckDB
+  class DonativosDuckDB
+  class AvisosDuckDB
+  class CasosDuckDB
+  class PronosticosDuckDB
+  class BitacoraDuckDB
+}
+
+Participante <|-- Donante
+Participante <|-- Receptor
+Participante <|-- Recolector
+Participante *-- Ubicacion
+Donativo "1" *-- "1..*" Alimento
+Donativo "1" *-- "0..1" DictamenInocuidad
+Donativo "1" *-- "0..1" Asignacion
+Donativo ..> EstadoDonativo
+Donativo "*" --> "1" Donante : donante_id
+Asignacion "*" --> "0..1" Receptor : receptor_id
+Donativo "*" --> "0..1" Recolector : recolector_id
+EventoDonativo --> "0..1" Actor
+CasoEscalado "*" --> "0..1" Donativo
+Pronostico "*" --> "1" Donante
+Aviso ..> Rol
+Actor ..> Rol
+
+EstadoBase <|-- Publicado
+EstadoBase <|-- Evaluado
+EstadoBase <|-- Asignado
+EstadoBase <|-- EnRecoleccion
+EstadoBase <|-- Entregado
+EstadoBase <|-- Rechazado
+EstadoBase <|-- Expirado
+EstadoBase <|-- Cancelado
+EstadoBase ..> Evento
+EstadoBase ..> TransicionInvalida : lanza
+Donativo ..> EstadoBase : aplicar_evento()
+
+RepositorioParticipantes <|.. ParticipantesDuckDB
+RepositorioDonativos <|.. DonativosDuckDB
+RepositorioAvisos <|.. AvisosDuckDB
+RepositorioCasos <|.. CasosDuckDB
+RepositorioPronosticos <|.. PronosticosDuckDB
+RepositorioBitacora <|.. BitacoraDuckDB
+RepositorioDonativos ..> Donativo
+RepositorioParticipantes ..> Participante
+@enduml

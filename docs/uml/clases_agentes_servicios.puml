@@ -1,0 +1,262 @@
+@startuml clases_agentes_servicios
+' Diagrama de clases de agentes, servicios y patrones (UML 2.5).
+!pragma layout smetana
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "LLM (inversión de dependencias)" {
+  abstract class ClienteLLM {
+    nombre_modelo: str
+    + generar_json(prompt, esquema, sistema): BaseModel
+    + embeber(textos): list[list[float]]
+    + disponible(): bool
+  }
+  class ClienteOllama
+  class ClienteLLMFalso {
+    + programar(esquema, *respuestas)
+  }
+  class ErrorLLM <<exception>>
+}
+
+package "Agentes" {
+  abstract class "Agente<E, S>" as Agente {
+    nombre: str
+    llm: ClienteLLM
+    bitacora: Bitacora
+    + ejecutar(entrada: E): S
+    # _anotar(tipo, contenido, donativo_id, paso, datos)
+  }
+  class AgenteInterprete {
+    + ejecutar(SolicitudInterpretacion): ResultadoInterpretacion
+  }
+  class AgenteInocuidad {
+    base_conocimiento: BaseConocimiento
+    + ejecutar(Donativo): DictamenInocuidad
+  }
+  class AgenteAsignador {
+    puntuador: Puntuador
+    pasos_react: int = 6
+    + ejecutar(SolicitudAsignacion): Asignacion
+    - _ciclo_react(...)
+  }
+  class PasoReAct {
+    pensamiento: str
+    accion: Literal[...]
+    receptor_id: str | None
+    justificacion: str | None
+  }
+  class AgenteLogistico {
+    + ejecutar(SolicitudRuta): RutaRecoleccion | None
+  }
+  class AgentePredictor {
+    + ejecutar(SolicitudPronostico): list[Pronostico]
+  }
+  class Orquestador <<LangGraph>> {
+    + procesar(solicitud, receptores): EstadoFlujo
+    + asignar(donativo, donante, receptores): Asignacion
+  }
+  class Bitacora {
+    + registrar(agente, tipo, contenido, ...)
+    + de_donativo(id)
+    + recientes(limite)
+  }
+}
+
+package "Chain of Responsibility (inocuidad)" {
+  abstract class ReglaInocuidad {
+    + enlazar(siguiente): ReglaInocuidad
+    + evaluar(...): list[Hallazgo]
+    + revisar(...): Hallazgo | None
+  }
+  class ReglaSenalesDeterioro
+  class ReglaEmpaque
+  class ReglaSinControlTemperatura
+  class ReglaOrigenDesconocido
+  class ReglaCadenaFrio
+  class ReglaComidaCaliente
+  class ReglaVidaUtil
+}
+
+package "Strategy" {
+  abstract class CriterioPuntuacion {
+    peso: float
+    + puntuar(ctx): float
+    + explicar(ctx): str
+  }
+  class CriterioDistancia
+  class CriterioCapacidad
+  class CriterioHorario
+  class CriterioEquidad
+  class Puntuador {
+    + clasificar(contextos): list[Candidato]
+  }
+  abstract class EstrategiaRuta {
+    nombre: str
+    + ordenar(origen, paradas, transporte, salida): RutaCalculada
+    + siguiente(posicion, habilitadas): Parada
+  }
+  class VecinoMasCercano
+  class PrimeroElMasUrgente
+}
+
+package "Template Method (documentos)" {
+  abstract class GeneradorDocumento {
+    + generar(): bytes
+    # _iniciar()
+    + encabezado()
+    + cuerpo() {abstract}
+    + pie()
+    # _cerrar(): bytes
+  }
+  class ConstanciaEntrega
+  class ReporteImpacto
+}
+
+package "RAG" {
+  abstract class BaseConocimiento {
+    + buscar(consulta, k): list[Fragmento]
+  }
+  class BaseConocimientoVectorial
+  class BaseConocimientoVacia
+}
+
+package "Servicios (SRP)" {
+  class Servicios <<dataclass>> {
+    participantes
+    publicacion
+    distribucion
+    reportes
+    notificaciones
+    casos
+    prediccion
+    estado_llm
+  }
+  class ServicioParticipantes {
+    + registrar(actor, participante, pin)
+    + eliminar(actor, id)
+    + iniciar_sesion(id, pin): Actor
+    + sesion_coordinador(pin): Actor
+  }
+  class ServicioPublicacion {
+    + publicar(actor, texto, donativo_id): ResultadoPublicacion
+    + cancelar(actor, donativo_id, motivo)
+  }
+  class ServicioDistribucion {
+    + aceptar(actor, id) / rechazar(actor, id, motivo)
+    + asignar_manual(actor, id, receptor_id, motivo)
+    + iniciar_recoleccion(actor, id)
+    + confirmar_entrega(actor, id)
+    + vencer_pendientes()
+    + ruta_sugerida(actor): RutaRecoleccion | None
+    + tomar_ruta(actor, ids): list[str]
+  }
+  class ServicioReportes {
+    + tablero(actor, desde, hasta, ...): TableroImpacto
+    + constancia_pdf(actor, id): bytes
+    + reporte_impacto_pdf(actor, desde, hasta): bytes
+  }
+  class ServicioNotificaciones {
+    + avisos(actor) / no_leidos(actor)
+    + marcar_leido(actor, aviso_id)
+  }
+  class ServicioCasos {
+    + abiertos(actor)
+    + resolver(actor, caso_id, nota)
+  }
+  class ServicioPrediccion
+  class CicloDeVida {
+    + registrar_publicacion(d, actor)
+    + transicionar(d, evento, motivo, actor)
+    + registrar_aceptacion(d, actor)
+    + registrar_tomado(d, actor)
+  }
+}
+
+package "Observer y Mediator" {
+  interface ObservadorEventos {
+    + al_ocurrir(evento: EventoDonativo)
+  }
+  class BusEventos {
+    + suscribir(observador)
+    + publicar(evento)
+  }
+  class NotificadorEstados
+  class MediadorCasos {
+    + notificar(emisor, tipo, donativo_id, motivo): CasoEscalado | None
+    + al_ocurrir(evento)
+  }
+  interface CanalAvisos {
+    + enviar(aviso)
+  }
+  class AvisosEnApp
+}
+
+ClienteLLM <|-- ClienteOllama
+ClienteLLM <|-- ClienteLLMFalso
+ClienteLLM ..> ErrorLLM : lanza
+
+Agente <|-- AgenteInterprete
+Agente <|-- AgenteInocuidad
+Agente <|-- AgenteAsignador
+Agente <|-- AgenteLogistico
+Agente <|-- AgentePredictor
+Agente o--> ClienteLLM
+Agente o--> Bitacora
+AgenteAsignador ..> PasoReAct
+AgenteAsignador o--> Puntuador
+AgenteInocuidad o--> BaseConocimiento
+AgenteInocuidad ..> ReglaInocuidad
+AgenteLogistico ..> EstrategiaRuta
+Orquestador o--> AgenteInterprete
+Orquestador o--> AgenteInocuidad
+Orquestador o--> AgenteAsignador
+
+ReglaInocuidad <|-- ReglaSenalesDeterioro
+ReglaInocuidad <|-- ReglaEmpaque
+ReglaInocuidad <|-- ReglaSinControlTemperatura
+ReglaInocuidad <|-- ReglaOrigenDesconocido
+ReglaInocuidad <|-- ReglaCadenaFrio
+ReglaInocuidad <|-- ReglaComidaCaliente
+ReglaInocuidad <|-- ReglaVidaUtil
+ReglaInocuidad --> "0..1" ReglaInocuidad : siguiente
+
+CriterioPuntuacion <|-- CriterioDistancia
+CriterioPuntuacion <|-- CriterioCapacidad
+CriterioPuntuacion <|-- CriterioHorario
+CriterioPuntuacion <|-- CriterioEquidad
+Puntuador o--> "1..*" CriterioPuntuacion
+EstrategiaRuta <|-- VecinoMasCercano
+EstrategiaRuta <|-- PrimeroElMasUrgente
+
+GeneradorDocumento <|-- ConstanciaEntrega
+GeneradorDocumento <|-- ReporteImpacto
+BaseConocimiento <|-- BaseConocimientoVectorial
+BaseConocimiento <|-- BaseConocimientoVacia
+
+Servicios *-- ServicioParticipantes
+Servicios *-- ServicioPublicacion
+Servicios *-- ServicioDistribucion
+Servicios *-- ServicioReportes
+Servicios *-- ServicioNotificaciones
+Servicios *-- ServicioCasos
+Servicios *-- ServicioPrediccion
+ServicioPublicacion --> Orquestador
+ServicioPublicacion --> CicloDeVida
+ServicioPublicacion --> MediadorCasos
+ServicioDistribucion --> Orquestador
+ServicioDistribucion --> CicloDeVida
+ServicioDistribucion --> MediadorCasos
+ServicioDistribucion --> AgenteLogistico
+ServicioReportes ..> GeneradorDocumento
+ServicioPrediccion --> AgentePredictor
+ServicioPrediccion --> CanalAvisos
+CicloDeVida --> BusEventos
+
+ObservadorEventos <|.. NotificadorEstados
+ObservadorEventos <|.. MediadorCasos
+BusEventos o--> "*" ObservadorEventos
+NotificadorEstados --> CanalAvisos
+MediadorCasos --> CanalAvisos
+CanalAvisos <|.. AvisosEnApp
+@enduml
