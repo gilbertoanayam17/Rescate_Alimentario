@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from pydantic import BaseModel
 
 from rescate.bitacora import Bitacora
+from rescate.documentos import ConstanciaEntrega, ReporteImpacto
 from rescate.dominio.enums import EstadoDonativo, Rol
 from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora
 from rescate.herramientas import impacto
@@ -14,7 +15,7 @@ from rescate.herramientas.impacto import ResumenImpacto
 from rescate.persistencia.repositorios import RepositorioDonativos, RepositorioParticipantes
 
 from .autorizacion import es_coordinador, exigir_rol, participante_del_actor
-from .errores import ErrorAutorizacion
+from .errores import ErrorAutorizacion, ErrorServicio
 
 
 class PuntoSemanal(BaseModel):
@@ -129,13 +130,31 @@ class ServicioReportes:
             kg_por_tipo=self._kg_por_tipo(entregados),
         )
 
-    def constancia_pdf(self, actor: Actor | None, donativo_id: str) -> bytes:
-        """Constancia de entrega (CAR-12). La implementa la tarea A4."""
-        raise NotImplementedError("La constancia de entrega llega con la tarea A4.")
+    def constancia_pdf(self, actor: Actor | None, donativo_id: str, comprimir: bool = True) -> bytes:
+        """Constancia de entrega en PDF (CAR-12): solo de donativos ENTREGADOS, para el donante,
+        el receptor o el coordinador."""
+        donativo = self._donativos.obtener(donativo_id)
+        if donativo is None:
+            raise ErrorServicio(f"No existe el donativo {donativo_id}.")
+        if not es_coordinador(actor):
+            exigir_rol(actor, Rol.DONANTE, Rol.RECEPTOR)
+            self._exigir_visible(actor, donativo)
+        if donativo.estado != EstadoDonativo.ENTREGADO:
+            raise ErrorServicio("La constancia solo existe para donativos entregados.")
+        entregas = [h["fecha"] for h in self._donativos.historial(donativo.id) if h["evento"] == "entregar"]
+        return ConstanciaEntrega(
+            donativo,
+            donante=self._participantes.obtener(donativo.donante_id),
+            receptor=self._participantes.obtener(donativo.receptor_id) if donativo.receptor_id else None,
+            recolector=self._participantes.obtener(donativo.recolector_id) if donativo.recolector_id else None,
+            fecha_entrega=entregas[-1] if entregas else donativo.actualizado,
+            comprimir=comprimir,
+        ).generar()
 
-    def reporte_impacto_pdf(self, actor: Actor | None, desde: date, hasta: date) -> bytes:
-        """Reporte ESG (CAR-12). Lo implementa la tarea A4."""
-        raise NotImplementedError("El reporte de impacto llega con la tarea A4.")
+    def reporte_impacto_pdf(self, actor: Actor | None, desde: date, hasta: date, comprimir: bool = True) -> bytes:
+        """Reporte ESG en PDF con las cifras del tablero del periodo (coordinador)."""
+        exigir_rol(actor, Rol.COORDINADOR)
+        return ReporteImpacto(self.tablero(actor, desde, hasta), comprimir=comprimir).generar()
 
     def _exigir_visible(self, actor: Actor | None, donativo: Donativo) -> None:
         if es_coordinador(actor):
