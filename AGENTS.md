@@ -32,7 +32,8 @@ Para trabajar sin Ollama, pon `USAR_LLM_FALSO=1` en `.env`.
    el cambio debe ser mínimo y retrocompatible (agregar, no renombrar ni quitar) y va en un
    PR aparte con prefijo `contrato:`.
 2. **Todo acceso al LLM pasa por `rescate.llm.cliente.ClienteLLM`** (`generar_json` con un
-   modelo Pydantic, `embeber`). Nunca importes `ollama` fuera de `rescate/llm/`.
+   modelo Pydantic, `embeber`). Nunca importes `ollama` fuera de `rescate/llm/`. El texto que
+   escriben los usuarios va delimitado en el prompt como dato, nunca como instrucción.
 3. **El LLM decide; el código calcula.** Kg, distancias, capacidades, horas y puntajes los
    calculan funciones deterministas, nunca el modelo.
 4. **Cada agente anota su razonamiento en la bitácora** (`self._anotar(...)`) y tiene un
@@ -45,3 +46,6 @@ Para trabajar sin Ollama, pon `USAR_LLM_FALSO=1` en `.env`.
 8. No subas `.env`, la base `.duckdb` ni el índice del RAG (`datos/indice/`).
 9. Agrega archivos por nombre (`git add <archivo>`) y revisa `git status` antes de cada commit:
    si aparece un `PLAN_*.md` o `docs/plan/`, detente. `.gitignore` los bloquea por si acaso.
+10. **La interfaz solo usa `Servicios` (`rescate/servicios/`) y siempre pasa el `Actor` de la
+   sesión.** Los servicios validan el rol y la propiedad contra la base; la interfaz nunca decide
+   permisos por su cuenta. Cada servicio tiene una sola responsabilidad: no vuelvas a juntarlos.
