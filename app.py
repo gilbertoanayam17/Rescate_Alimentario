@@ -12,6 +12,7 @@ from rescate.contenedor import construir_servicios
 from rescate.dominio.enums import Rol
 from rescate.dominio.modelos import Actor
 from ui import coordinador, donante, receptor, recolector
+from ui.comun import panel_avisos
 
 st.set_page_config(page_title="Rescate Alimentario", page_icon="🥖", layout="wide")
 
@@ -52,6 +53,7 @@ with st.sidebar:
             )
             actor = Actor(rol=rol, participante_id=elegido)
     st.divider()
+    panel_avisos(servicios, actor)
     st.caption(servicios.estado_llm())
 
 PAGINAS[rol].mostrar(servicios, actor)

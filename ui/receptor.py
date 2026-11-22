@@ -8,6 +8,7 @@ from rescate.dominio.enums import EstadoDonativo as E
 from rescate.dominio.enums import TipoAlimento
 from rescate.dominio.modelos import Actor, Receptor, ahora
 from rescate.servicios import ErrorServicio, Servicios
+from ui.componentes_prediccion import tarjeta_pronostico
 from ui.comun import tarjeta_donativo
 
 ETIQUETAS = dict(
@@ -68,7 +69,9 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
             if d.actualizado >= ahora() - timedelta(days=7)
         ),
     )
-    tabs = st.tabs(["Por confirmar", "En camino", "Recibidos", "Mi perfil"])
+    tabs = st.tabs(
+        ["Por confirmar", "En camino", "Recibidos", "Posibles donativos", "Mi perfil"]
+    )
     with tabs[0]:
         if not pendientes:
             st.info("No hay donativos por confirmar.")
@@ -115,7 +118,9 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
         st.metric("Total de kg recibidos", sum(d.kg_totales for d in recibidos))
         for d in recibidos:
             tarjeta_donativo(servicios, actor, d)
-    with tabs[3], st.form("receptor_perfil"):
+    with tabs[3]:
+        posibles_donativos(servicios, actor)
+    with tabs[4], st.form("receptor_perfil"):
         tipos = st.multiselect(
             "Tipos aceptados",
             list(TipoAlimento),
@@ -162,3 +167,17 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                 st.rerun()
             except ErrorServicio as exc:
                 st.error(str(exc))
+
+
+def posibles_donativos(servicios: Servicios, actor: Actor) -> None:
+    """Pronósticos en los que este comedor quedó pre-reservado (CAR-07), sin acciones."""
+    st.caption(
+        "Lo que probablemente te donen hoy, según el historial de los comercios. "
+        "Es un aviso: el donativo real llega cuando el comercio lo publica."
+    )
+    pronosticos = servicios.prediccion.pronosticos_para_receptor(actor)
+    if not pronosticos:
+        st.info("Por ahora no hay posibles donativos para tu organización.")
+    for p in pronosticos:
+        donante = servicios.participantes.obtener(p.donante_id)
+        tarjeta_pronostico(p, nombre_donante=donante.nombre if donante else None)
