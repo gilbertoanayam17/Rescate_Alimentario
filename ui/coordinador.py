@@ -367,6 +367,14 @@ def pestana_impacto(servicios: Servicios, actor: Actor) -> None:
         receptor_id=receptor.id if receptor else None,
     )
     metricas_impacto(tablero)
+    st.download_button(
+        "Descargar reporte ESG (PDF)",
+        data=lambda: servicios.reportes.reporte_impacto_pdf(actor, desde, hasta),
+        file_name=f"reporte_impacto_{desde:%Y%m%d}_{hasta:%Y%m%d}.pdf",
+        mime="application/pdf",
+        key="coordinador_reporte_esg",
+        help="Cifras de toda la organización en el periodo elegido.",
+    )
     if not tablero.resumen.donativos:
         st.info("No hay entregas en este periodo.")
         return
