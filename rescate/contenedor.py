@@ -111,7 +111,9 @@ def construir_aplicacion(
     ciclo = CicloDeVida(repos.donativos, bus)
 
     servicios = Servicios(
-        participantes=ServicioParticipantes(repos.participantes, repos.donativos),
+        participantes=ServicioParticipantes(
+            repos.participantes, repos.donativos, pin_coordinador=config.pin_coordinador
+        ),
         publicacion=ServicioPublicacion(orquestador, repos.participantes, repos.donativos, ciclo, mediador),
         distribucion=ServicioDistribucion(
             orquestador,

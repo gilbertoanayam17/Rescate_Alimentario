@@ -32,6 +32,8 @@ class Configuracion:
     ruta_semilla: Path
     ruta_conocimiento: Path
     ruta_indice: Path
+    pin_demo: str = "1234"  # PIN que reciben los participantes de la semilla sin PIN
+    pin_coordinador: str = "0000"  # PIN de la sesión del coordinador
 
 
 def cargar_configuracion() -> Configuracion:
@@ -46,4 +48,6 @@ def cargar_configuracion() -> Configuracion:
         ruta_semilla=RAIZ / "datos" / "semilla.json",
         ruta_conocimiento=RAIZ / "datos" / "conocimiento",
         ruta_indice=RAIZ / "datos" / "indice",
+        pin_demo=os.getenv("PIN_DEMO", "1234").strip(),
+        pin_coordinador=os.getenv("PIN_COORDINADOR", "0000").strip(),
     )
