@@ -5,7 +5,7 @@ import threading
 from collections.abc import Callable
 from datetime import datetime
 
-from rescate.agentes.logistico import AgenteLogistico
+from rescate.agentes.logistico import AgenteLogistico, RutaRecoleccion, SolicitudRuta
 from rescate.dominio.enums import EstadoDonativo, Evento, Rol, TipoCaso, TipoEntradaBitacora
 from rescate.dominio.estados import TransicionInvalida, aplicar_evento
 from rescate.dominio.modelos import Actor, Asignacion, Donativo, Receptor, Recolector, ahora
@@ -183,9 +183,32 @@ class ServicioDistribucion:
             self._ciclo.transicionar(donativo, Evento.ENTREGAR, "Entregado al receptor", actor)
             return donativo
 
-    def ruta_sugerida(self, actor: Actor | None):
-        """Ruta con varias paradas del Agente Logístico (la completa la tarea A5)."""
-        participante_del_actor(actor, Rol.RECOLECTOR, self._participantes)
+    def ruta_sugerida(self, actor: Actor | None) -> RutaRecoleccion | None:
+        """Ruta con varias paradas del Agente Logístico (CAR-04): lo que el recolector ya lleva
+        más los disponibles cercanos que le caben. None si no hay nada que proponer."""
+        recolector = participante_del_actor(actor, Rol.RECOLECTOR, self._participantes)
+        if self._logistico is None or not isinstance(recolector, Recolector):
+            return None
+        tomados = [
+            d for d in self._donativos.de_recolector(recolector.id) if d.estado == EstadoDonativo.EN_RECOLECCION
+        ]
+        momento = self._reloj()
+        disponibles = (
+            [d for d in self.disponibles_para_recolectar(actor) if limite_recoleccion(d, momento) > momento]
+            if recolector.disponible
+            else []
+        )
+        involucrados = {pid for d in tomados + disponibles for pid in (d.donante_id, d.receptor_id) if pid}
+        participantes = {pid: p for pid in involucrados if (p := self._participantes.obtener(pid))}
+        return self._logistico.ejecutar(
+            SolicitudRuta(
+                recolector=recolector,
+                tomados=tomados,
+                disponibles=disponibles,
+                participantes=participantes,
+                salida=momento,
+            )
+        )
 
     def tomar_ruta(self, actor: Actor | None, donativo_ids: list[str]) -> list[str]:
         """Toma cada donativo de la ruta; regresa los que ya había tomado otro voluntario."""
