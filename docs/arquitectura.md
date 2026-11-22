@@ -1,62 +1,104 @@
-# Arquitectura del MVP
+# Arquitectura
 
-Cómo está construido Rescate Alimentario por dentro: capas, recorrido de un donativo, ciclo de
-vida, patrones de diseño y decisiones. Sirve de base para los diagramas UML de la entrega final.
+Cómo está construido Rescate Alimentario por dentro en la entrega final: capas, recorrido de una
+publicación y de una recolección, ciclo de vida, eventos y mediador, patrones con su archivo y
+cómo extenderlos, decisiones de seguridad y las fuentes de los factores de impacto. Los
+diagramas UML 2.5 están en [uml/](uml/README.md).
 
-![Arquitectura del MVP](img/arquitectura_mvp.png)
+<!-- PENDIENTE: imagen img/arquitectura_final.png, se genera con herramientas_docs (Gilberto). -->
+> **Imagen de arquitectura final: pendiente** (`img/arquitectura_final.png`). Mientras tanto, ver
+> el [diagrama de componentes](uml/componentes.png).
 
 ## Capas
 
-| Capa | Dónde | Responsabilidad |
-| --- | --- | --- |
-| Interfaz | `app.py`, `ui/` | Streamlit con un selector de rol. Cada página expone `mostrar(servicio, participante)` y solo habla con la fachada |
-| Fachada | `rescate/servicios.py` | `ServicioDonativos`: único punto de entrada; aplica las transiciones del ciclo de vida y guarda el historial |
-| Orquestador | `rescate/orquestador.py` | Grafo de LangGraph: interpretar → evaluar → asignar. Coordina, pero no guarda ni cambia estados |
-| Agentes | `rescate/agentes/` | `AgenteInterprete`, `AgenteInocuidad` y `AgenteAsignador`, con la interfaz común `Agente.ejecutar` |
-| Herramientas | `rescate/herramientas/` | Cálculos deterministas: distancia, capacidad, horario, equidad, compatibilidad y puntuación |
-| Conocimiento | `rescate/rag/`, `datos/conocimiento/` | Extracto textual de la NOM-251-SSA1-2009 y criterios CI-01 a CI-07, indexados con FAISS y `nomic-embed-text` |
-| LLM | `rescate/llm/` | `ClienteLLM` (abstracción), `ClienteOllama` (con 2 reintentos) y `ClienteLLMFalso` para las pruebas |
-| Persistencia | `rescate/persistencia/` | Repositorios de participantes, donativos (con historial) y bitácora sobre DuckDB |
-| Composición | `rescate/contenedor.py` | Crea y conecta todas las piezas según `.env` |
+```text
+app.py  inicio de sesión con PIN → Actor en st.session_state; página según actor.rol
+  └─ ui/<rol>.py  mostrar(servicios: Servicios, actor: Actor)
+       └─ rescate/servicios/  Servicios (dataclass sin lógica que agrupa los servicios)
+            ├─ ServicioParticipantes   alta, edición, baja, PIN e inicio de sesión  ┐ salen del antiguo
+            ├─ ServicioPublicacion     publicar, aclarar, cancelar                  │ ServicioDonativos
+            ├─ ServicioDistribucion    asignar, aceptar, rechazar, recolectar,      │ (SRP)
+            │                          entregar, vencer, ruta                       ┘
+            ├─ ServicioReportes        consultas, historial, bitácora, tablero, PDF
+            ├─ ServicioNotificaciones  avisos por participante
+            ├─ ServicioCasos           bandeja del coordinador
+            ├─ ServicioPrediccion      pronósticos y pre-reserva
+            ├─ CicloDeVida             transiciones (State) + historial + BusEventos
+            ├─ autorizacion.py         exigir_rol, participante_del_actor
+            └─ BusEventos ──► NotificadorEstados (Observer) ──► CanalAvisos
+                          └─► MediadorCasos (Mediator) ◄── señales de Publicación y Distribución
+rescate/orquestador.py   LangGraph: interpretar → evaluar → asignar
+rescate/agentes/         Intérprete · Inocuidad · Asignador (ReAct) · Logístico · Predictor
+rescate/herramientas/    geo · capacidad · horario · equidad · compatibilidad · puntuacion
+                         · rutas · impacto · patrones
+rescate/documentos/      GeneradorDocumento (Template Method) → ConstanciaEntrega, ReporteImpacto
+rescate/rag/             BaseConocimiento → FAISS sobre la NOM-251 y los criterios CI-01 a CI-07
+rescate/llm/             ClienteLLM → ClienteOllama, ClienteLLMFalso
+rescate/persistencia/    repositorios DuckDB (participantes, donativos, bitácora, avisos, casos, pronósticos)
+rescate/contenedor.py    construir_servicios(): único lugar donde se conectan las piezas
+```
 
-## Recorrido de un donativo
+## Recorrido de una publicación
 
 ```mermaid
 sequenceDiagram
     actor D as Donante
-    participant UI as Interfaz (ui/donante.py)
-    participant F as Fachada (ServicioDonativos)
-    participant O as Orquestador (LangGraph)
+    participant SP as ServicioPublicacion
+    participant O as Orquestador
     participant I as Intérprete
     participant S as Inocuidad
-    participant A as Asignador
-    participant DB as DuckDB
+    participant A as Asignador (ReAct)
+    participant CV as CicloDeVida
+    participant B as BusEventos
 
-    D->>UI: "Tengo 2 charolas de pollo en mole"
-    UI->>F: publicar(texto, donante)
-    F->>O: procesar(solicitud, receptores)
-    O->>I: ejecutar(solicitud)
+    D->>SP: publicar(actor, "Tengo 2 charolas de pollo en mole")
+    SP->>SP: valida el Actor contra la base; candado (cola por orden de llegada)
+    SP->>O: procesar(solicitud, receptores)
+    O->>I: ejecutar (texto limpio y delimitado como dato)
     I-->>O: incompleto + pregunta
-    O-->>F: faltan datos
-    F-->>UI: "¿A qué hora lo preparaste y cómo lo guardaste?"
-    D->>UI: "lo hice hace una hora y lo tengo en el refri"
-    UI->>F: publicar(texto + aclaración, mismo donativo_id)
-    F->>O: procesar(...)
-    O->>I: ejecutar(...)
-    I-->>O: donativo completo (kg y horas calculados por código)
-    O->>S: ejecutar(donativo)
-    S-->>O: apto con condiciones + citas de la NOM-251
-    O->>A: ejecutar(donativo, receptores)
-    A-->>O: receptor + justificación con datos calculados
-    O-->>F: estado del flujo
-    F->>DB: guarda donativo y transiciones (publicado → evaluado → asignado)
-    F-->>UI: "¡Listo! Tu donativo se asignó a …"
+    SP-->>D: "¿A qué hora lo preparaste y cómo lo guardaste?"
+    D->>SP: publicar(actor, texto + aclaración, mismo id)
+    O->>I: ejecutar → alimentos; kg y horas calculados por código
+    O->>S: reglas CI-01..CI-07 → RAG NOM-251 → LLM (solo endurece)
+    S-->>O: apto con condiciones + citas comprobadas
+    O->>A: ciclo pensamiento → acción → observación (herramientas)
+    A-->>O: receptor validado (compatible, top 3, con ventaja)
+    SP->>CV: registrar_publicacion · evaluar_apto · asignar
+    CV->>B: EventoDonativo("asignar")
+    B-->>D: avisos al donante y al receptor (NotificadorEstados)
 ```
 
-1. **Intérprete.** El LLM convierte la frase en alimentos con el esquema Pydantic `InterpretacionLLM`. El código corrige el tipo de alimento, estima los kilos (`estimar_kg`), convierte expresiones como "hace una hora" (`hora_relativa`) y calcula el límite de recogida (`calcular_recoger_antes_de`). Si a un perecedero le falta la hora o la conservación, pregunta. La interfaz reenvía el texto con `"\nAclaración del donante: "` y el mismo id, con un máximo de 2 aclaraciones.
-2. **Inocuidad.** Primero corre la cadena de 7 reglas (`crear_cadena`). Si dicen no apto, ahí termina: el LLM no se consulta, porque no puede relajar un dictamen. Si pasan, busca 4 fragmentos en la base de conocimiento, consulta al LLM con `EvaluacionLLM` y combina los dos resultados quedándose con el más estricto. Las citas que no salieron de un fragmento recuperado se descartan (`filtrar_citas`).
-3. **Asignador.** Descarta receptores incompatibles (`evaluar_compatibilidad`: tipos aceptados, refrigeración, rechazos previos), puntúa a los demás con 4 criterios (35 % distancia, 25 % capacidad, 25 % horario, 15 % equidad) y le pasa los 3 mejores al LLM con `DecisionAsignacion`. El sistema rechaza un id fuera de la lista o una elección que no supere al primero en ningún criterio (`tiene_ventaja`); en esos casos, o si el LLM falla, se queda el de mayor puntaje. Con un solo candidato no consulta al modelo, y sin candidatos el caso pasa al coordinador.
-4. **Después de asignar.** El receptor acepta (`aceptar_asignacion`) o rechaza con motivo (`rechazar_asignacion`, que libera el donativo y vuelve a correr el Asignador sin el que rechazó). El recolector inicia la recolección y confirma la entrega. El coordinador puede reintentar los casos sin receptor (`reintentar_asignacion`).
+1. **Intérprete.** Limpia el texto, detecta intentos de manipulación y lo pasa al LLM entre `<texto_donante>` como dato. Convierte la frase en alimentos con `InterpretacionLLM`; el código corrige el tipo, estima los kilos, convierte "hace una hora" y calcula el límite de recogida. La conservación que diga el LLM se valida contra `detectar_conservacion()` sobre el texto confiable. Si a un perecedero le falta la hora o la conservación, pregunta (máximo 2 aclaraciones).
+2. **Inocuidad.** Cadena de 7 reglas; si dicen no apto, el LLM no se consulta. Si pasan, busca 4 fragmentos en la NOM-251, consulta al LLM y se queda con el dictamen más estricto. Las citas que no salieron de un fragmento recuperado se descartan. En alimentos de bajo riesgo, endurecer exige fundamento; los dictámenes dudosos se marcan con `requiere_revision` y abren un caso.
+3. **Asignador.** Filtra con `evaluar_compatibilidad` (tipos, refrigeración, rechazos previos) y puntúa con 4 criterios (35 % distancia, 25 % capacidad, 25 % horario, 15 % equidad). Con 2 o más candidatos corre el ciclo ReAct: en cada paso el LLM elige una herramienta (`listar_compatibles`, `distancia`, `capacidad`, `horario`, `equidad`, `puntuar`) y ve la observación calculada; al `finalizar`, el receptor debe ser compatible, estar entre los 3 mejores y, si no es el primero, superarlo en algún criterio. Si se agotan los 6 pasos, la acción es inválida o el LLM falla, se usa la selección de una consulta entre los 3 mejores, y si esa también falla, el mayor puntaje.
+4. **Sin receptor o con dudas.** `ServicioPublicacion` avisa al `MediadorCasos`: alertas del Intérprete (`POSIBLE_INYECCION`, `INTERPRETACION_CORREGIDA`), `INOCUIDAD_DUDOSA` y `SIN_RECEPTOR`.
+
+## Recorrido de una recolección
+
+```mermaid
+sequenceDiagram
+    actor R as Receptor
+    actor V as Voluntario
+    participant SD as ServicioDistribucion
+    participant L as Agente Logístico
+    participant DB as DonativosDuckDB
+    participant SR as ServicioReportes
+
+    R->>SD: aceptar(actor, id)
+    SD-->>V: aviso "Hay un donativo listo para recoger"
+    V->>SD: ruta_sugerida(actor)
+    SD->>L: lo que lleva + disponibles a ≤ 6 km que caben en su transporte
+    L->>L: VecinoMasCercano y PrimeroElMasUrgente (km, llegadas, límites)
+    L-->>SD: ruta elegida (LLM solo si difieren y ambas cumplen) + explicación
+    V->>SD: tomar_ruta(actor, ids)
+    SD->>DB: tomar_para_recoleccion: UPDATE … WHERE estado='asignado' AND recolector_id IS NULL
+    DB-->>SD: True (o False si otro voluntario ganó)
+    V->>SD: confirmar_entrega(actor, id)
+    R->>SR: constancia_pdf(actor, id)
+    SR-->>R: PDF (Template Method)
+```
+
+Si el plazo de recolección vence antes de que alguien tome el donativo, `vencer_pendientes()` lo pasa a EXPIRADO y abre un caso `RECOLECCION_VENCIDA`. Se ejecuta al abrir las páginas del coordinador y del recolector.
 
 ## Ciclo de vida del donativo
 
@@ -81,43 +123,71 @@ stateDiagram-v2
     expirado --> [*]
 ```
 
-Cada estado es una clase en `rescate/dominio/estados.py` con su diccionario de transiciones; un evento no permitido lanza `TransicionInvalida`. La aceptación del receptor no cambia de estado: se registra en el historial como `asignado → asignado (aceptar)`. La expiración existe en el modelo, pero en el MVP no hay un botón ni un proceso que la dispare.
+Cada estado es una clase en `rescate/dominio/estados.py` con sus transiciones; un evento no permitido lanza `TransicionInvalida`. La aceptación del receptor no cambia de estado: se registra como `asignado → asignado (aceptar)`.
+
+## Eventos, avisos y mediador
+
+`CicloDeVida` guarda cada transición en el historial y publica un `EventoDonativo` en el `BusEventos`. Un observador que falla no deshace la operación.
+
+- **`NotificadorEstados`** (Observer) arma los avisos de cada evento y los manda por `CanalAvisos`:
+
+| Evento | Avisa a |
+| --- | --- |
+| `evaluar_no_apto` | donante, con el motivo |
+| `asignar` | receptor asignado y donante |
+| `liberar` | donante ("buscamos otro receptor") |
+| `aceptar` | donante y recolectores disponibles |
+| `iniciar_recoleccion` | donante y receptor ("va en camino") |
+| `entregar` | donante y receptor ("ya puedes descargar la constancia") |
+| `cancelar`, `expirar` | los involucrados, menos quien hizo la operación |
+
+- **`MediadorCasos`** (Mediator) recibe las señales de los servicios y abre casos sin duplicarlos (mismo tipo y donativo), avisando a la coordinación. También escucha el bus: con `asignar` resuelve el caso `SIN_RECEPTOR`; con `cancelar` o `expirar`, los casos abiertos del donativo; con el segundo `liberar`, abre `RECHAZOS_REPETIDOS`. Así los agentes, el coordinador y los participantes no se llaman entre sí.
 
 ## Patrones de diseño
 
 | Patrón | Dónde | Cómo se extiende |
 | --- | --- | --- |
 | State | `rescate/dominio/estados.py` | Un estado nuevo es una clase con sus transiciones, registrada en `ESTADOS` |
-| Facade | `rescate/servicios.py` | Las pantallas nuevas usan los métodos de `ServicioDonativos`; los métodos nuevos se agregan sin cambiar los existentes |
+| Repository | `rescate/persistencia/repositorios.py` | Otra base implementa las mismas interfaces (`RepositorioDonativos`, etc.) |
+| Strategy (puntuación) | `rescate/herramientas/puntuacion.py` | Un criterio nuevo hereda de `CriterioPuntuacion`; `Puntuador` valida que los pesos sumen 1 |
+| Strategy (rutas) | `rescate/herramientas/rutas.py` | Una estrategia nueva hereda de `EstrategiaRuta`, implementa `siguiente` y se registra en `ESTRATEGIAS` |
+| Strategy (canal de avisos) | `CanalAvisos` en `rescate/servicios/notificaciones.py` | WhatsApp o correo serían otra clase con `enviar(aviso)`; el notificador no cambia |
 | Chain of Responsibility | `rescate/agentes/reglas_inocuidad.py` | Una regla nueva hereda de `ReglaInocuidad`, implementa `revisar` y se enlaza en `crear_cadena` |
-| Strategy | `rescate/herramientas/puntuacion.py` | Un criterio nuevo hereda de `CriterioPuntuacion`; `Puntuador` valida que los pesos sumen 1 |
-| Repository | `rescate/persistencia/repositorios.py` | Otra base de datos implementa las mismas interfaces (`RepositorioDonativos`, etc.) |
-| Inversión de dependencias | `rescate/llm/cliente.py`, `rescate/agentes/base.py` | Otro proveedor de modelos implementa `ClienteLLM`; los agentes no cambian |
-| Orquestación por grafo | `rescate/orquestador.py` | Un agente nuevo es un nodo más del grafo con sus aristas condicionales |
-| Raíz de composición | `rescate/contenedor.py` | Es el único archivo que conoce las clases concretas; ahí se conecta cualquier pieza nueva |
+| Observer | `BusEventos`, `ObservadorEventos`, `NotificadorEstados` | Un observador nuevo implementa `al_ocurrir` y se suscribe en el contenedor |
+| Mediator | `rescate/mediador.py` | Un tipo de caso nuevo es un valor de `TipoCaso` y su regla en `notificar` o `al_ocurrir` |
+| Template Method | `rescate/documentos/base.py` | Un documento nuevo hereda de `GeneradorDocumento` e implementa `cuerpo()` (y, si quiere, `pie()`); no toca la base |
+| ReAct | `rescate/agentes/asignador.py` | Una herramienta nueva es una acción más en `PasoReAct` y su rama en `_observar` |
+| Inversión de dependencias | `ClienteLLM`, `BaseConocimiento`, repositorios, `CanalAvisos` | Otro proveedor implementa la interfaz; los agentes y servicios no cambian |
+| Orquestación por grafo | `rescate/orquestador.py` | Un agente nuevo del flujo de publicación es un nodo más del grafo |
+| Raíz de composición | `rescate/contenedor.py` | Es el único archivo que conoce las clases concretas |
+| SRP en servicios | `rescate/servicios/` | Una responsabilidad nueva es un servicio nuevo en `Servicios`, no métodos en otro |
 
-## Decisiones de diseño
+## Decisiones de diseño y de seguridad
 
-- **El LLM decide; las herramientas calculan.** Kilos, horas, distancias, capacidades y puntajes los calcula código con pruebas. El modelo interpreta, puede endurecer un dictamen y elige entre candidatos ya calculados.
-- **La inocuidad manda.** Ante la duda gana el dictamen más estricto, y un no apto de las reglas no se consulta con el modelo.
-- **Respaldo en cada agente.** Si el LLM falla o responde algo que no valida contra su esquema, el agente sigue con reglas deterministas y lo anota como error en la bitácora.
+- **El LLM decide; las herramientas calculan.** Kilos, horas, distancias, capacidades, puntajes, rutas, raciones, emisiones y patrones los calcula código con pruebas. El modelo interpreta, endurece dictámenes, elige entre opciones ya calculadas y redacta. Lo que devuelve se valida antes de usarse.
+- **La inocuidad manda.** Ante la duda gana el dictamen más estricto, y un no apto de las reglas ni se consulta con el modelo.
+- **Respaldo en cada agente.** Si el LLM falla o responde algo inválido, el agente sigue con reglas deterministas y lo anota como error en la bitácora.
+- **Autorización en el servicio.** La interfaz solo dice quién pide la operación (`Actor`); el servicio busca al participante en la base y verifica su rol y la propiedad del donativo. Un `Actor` con rol falso es rechazado.
+- **Recolección atómica.** `tomar_para_recoleccion` actualiza solo si el donativo sigue ASIGNADO y sin recolector, dentro de un candado; un conflicto cuenta como "ya lo tomó otro". `tomar_ruta` informa cuáles perdió.
+- **Publicaciones en cola.** Un candado atiende las publicaciones una por una en el pico de cierre; 10 simultáneas se guardan sin pérdidas.
+- **Prompt injection.** El texto de los usuarios se limpia, se delimita como dato y el prompt de sistema lo dice (`REGLA_DATOS`). Los intentos se detectan y abren un caso; la respuesta del LLM se compara con lo que el código saca del texto confiable.
+- **PIN.** PBKDF2-SHA256 con sal aleatoria y 100 000 iteraciones, comparación en tiempo constante, bloqueo de 1 minuto tras 5 fallos en 5 minutos. Sin PIN guardado no se entra; el PIN de la demo solo lo asigna `cargar_semilla.py`. Nunca se guarda en claro ni en la bitácora.
 - **Citas comprobadas.** Inocuidad solo acepta numerales de la NOM-251 que aparecen en los fragmentos recuperados.
-- **Todo en local.** Ollama corre el modelo y los embeddings en la misma computadora; no se envían datos a servicios de IA externos.
-- **Selección validada en lugar de ReAct de varios pasos.** Con un modelo local pequeño, elegir entre 3 candidatos ya calculados resultó más confiable. El ciclo ReAct queda como trabajo futuro.
+- **Todo en local.** Ollama corre el modelo y los embeddings en la misma computadora.
 
 ## Bitácora de razonamiento
 
-Cada agente anota sus pasos con `self._anotar(...)` y la bitácora los guarda en DuckDB en el orden en que ocurrieron.
+Cada agente anota sus pasos con `self._anotar(...)`; la bitácora los guarda en DuckDB en orden.
 
 | Tipo | Ícono | Ejemplo |
 | --- | --- | --- |
-| Pensamiento | 💭 | "Dona 2 charolas de pollo en mole, un guisado; no dice cuándo lo preparó" |
-| Acción | 🛠️ | "Busco en la NOM-251 y en los criterios: pollo en mole…" |
-| Observación | 👀 | "3 compatibles; descartados: Casa Hogar San Pedro (no tiene refrigeración)…" |
+| Pensamiento | 💭 | "ReAct 2: Reviso si Comedor Oblatos tiene espacio" |
+| Acción | 🛠️ | "ReAct 2: capacidad(com-oblatos)" |
+| Observación | 👀 | "Comedor Comunitario Oblatos: puede recibir 56 kg más hoy; el donativo pesa 4 kg." |
 | Resultado | ✅ | "apto_con_condiciones: …" |
-| Error | ⚠️ | "El LLM eligió un receptor fuera de la lista; uso el mayor puntaje calculado" |
+| Error | ⚠️ | "ReAct: … no supera a … en ningún criterio calculado; uso la selección entre los 3 mejores." |
 
-La página del donante muestra la bitácora de cada donativo en "¿Cómo lo decidieron los agentes?" y el coordinador la consulta completa, con filtros por agente y por donativo.
+El donante ve la bitácora de cada donativo en "¿Cómo lo decidieron los agentes?" y el coordinador la consulta completa, con filtros por agente y por donativo.
 
 ## Tablero de impacto y sus fuentes
 

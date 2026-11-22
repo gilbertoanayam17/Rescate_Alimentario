@@ -6,17 +6,19 @@ Del sobrante de la fonda al comedor comunitario, con agentes de IA que corren en
 
 Rescate Alimentario conecta a pequeños comercios de alimentos (fondas, panaderías, puestos de
 mercado) con comedores comunitarios. El donante describe su excedente en una frase y un equipo
-de agentes con un LLM local lo interpreta, verifica que sea apto para donarse y elige al
-receptor más adecuado. Proyecto del Hackathon Agéntico 2026B de Diseño de Software (ITESO),
-alineado al ODS 2 (Hambre cero) y a la meta 12.3 del ODS 12.
+de cinco agentes con un LLM local lo interpreta, verifica que sea apto para donarse (NOM-251),
+elige al receptor, propone la ruta al voluntario y anticipa los excedentes de mañana. Proyecto
+del Hackathon Agéntico 2026B de Diseño de Software (ITESO), alineado al ODS 2 (Hambre cero) y
+a la meta 12.3 del ODS 12.
 
-> MVP de la segunda entrega: viernes 6 de noviembre de 2026, 23:30 (centro de México).
-> Video demo: https://youtu.be/A0HnOscPrOA
+> Entrega final: martes 24 de noviembre de 2026.
+> Video de la entrega final: **pendiente** (se agrega la liga el lunes 23 al subirlo).
+> Video de la segunda entrega (MVP): <https://youtu.be/A0HnOscPrOA>
 
 ## Cómo correrlo
 
-Requisitos: Python 3.11 o superior. [Ollama](https://ollama.com) se necesita para
-las decisiones del modelo real; las pruebas automatizadas usan un cliente simulado.
+Requisitos: Python 3.11 o superior. [Ollama](https://ollama.com) se necesita para las decisiones
+del modelo real; las pruebas automatizadas usan un cliente simulado.
 
 En Windows (PowerShell), desde la carpeta del repositorio:
 
@@ -38,218 +40,177 @@ python -m pip install -r requirements.txt
 test -f .env || cp .env.example .env
 ```
 
-Primero pon `USAR_LLM_FALSO=1` en `.env` para comprobar reglas y pantallas:
+Prepara la demostración con Streamlit detenido:
 
 ```powershell
-python -m pytest
-python -m streamlit run app.py
+python scripts/cargar_semilla.py --reiniciar   # 15 participantes ficticios, con el PIN de la demo
+python scripts/generar_historial.py            # un año de entregas: tablero de impacto y pronósticos
+python scripts/indexar_conocimiento.py         # índice del RAG (requiere nomic-embed-text)
+python -m streamlit run app.py                 # http://localhost:8501
 ```
 
-Abre http://localhost:8501. Detén la app con Ctrl+C antes de cambiar el modo,
-indexar el conocimiento o ejecutar scripts sobre la misma base.
+Para probar sin modelo pon `USAR_LLM_FALSO=1` en `.env`: los agentes usan sus reglas de respaldo
+(sirve para revisar reglas y pantallas, no demuestra decisiones de IA real).
 
-**Inicio de sesión.** Elige tu rol y tu nombre y escribe el PIN. En la demo, los
-participantes de `datos/semilla.json` entran con `PIN_DEMO` (por omisión `1234`) y el
-coordinador con `PIN_COORDINADOR` (por omisión `0000`); los dos se cambian en `.env`.
-Para cargar un año de historial (tablero de impacto y pronósticos), con Streamlit detenido:
-`python scripts/generar_historial.py`.
+**Inicio de sesión.** Elige tu rol y tu nombre y escribe tu PIN. Los participantes que carga
+`cargar_semilla.py` entran con `PIN_DEMO` (por omisión `1234`) y el coordinador con
+`PIN_COORDINADOR` (por omisión `0000`); los dos se cambian en `.env`. Un participante sin PIN no
+puede entrar: el coordinador se lo asigna en la pestaña Participantes.
 
-Para usar Ollama, revisa `ollama list`. Configura `MODELO_LLM` con un nombre
-instalado y `USAR_LLM_FALSO=0` en `.env`. Si hace falta descargar modelos:
+Para usar Ollama, revisa `ollama list`, pon `USAR_LLM_FALSO=0` y, si hace falta, descarga los modelos:
 
 ```powershell
 ollama pull gemma4:e4b
 ollama pull nomic-embed-text
-python scripts/indexar_conocimiento.py --buscar "refrigeración"
-python -m streamlit run app.py
+ollama run gemma4:e4b "hola"    # calienta el modelo antes de la primera publicación
 ```
 
-Si ya tienes `gemma4:26b`, puedes usar `MODELO_LLM=gemma4:26b` sin descargar el
-modelo ligero. Reinicia Streamlit después de cambiar `.env`: el servicio se conserva
-en caché. Un índice generado con embeddings simulados se reconstruye al usar el cliente real.
+Reinicia Streamlit después de cambiar `.env`: los servicios se conservan en caché.
+
+## Funcionalidad por caso de uso
+
+| Caso de uso | Quién | Qué hace |
+| --- | --- | --- |
+| CU-01 Iniciar y cerrar sesión | Todos | PIN guardado con PBKDF2 y sal; 5 intentos fallidos bloquean 1 minuto; el rol sale del participante, no se elige. Aviso de privacidad en la entrada |
+| CU-02 Publicar un excedente | Donante | Frase en lenguaje natural; el Intérprete pregunta lo que falte (hasta 2 aclaraciones). El texto del donante viaja como dato, nunca como instrucción |
+| CU-03 Evaluar inocuidad | Agente de Inocuidad | 7 reglas (CI-01 a CI-07), RAG sobre la NOM-251 y LLM que solo puede endurecer el dictamen; los dudosos van al coordinador |
+| CU-04 Asignar receptor | Agente Asignador | Filtros, puntuación con 4 criterios y ciclo ReAct de hasta 6 pasos con herramientas; respaldo a la selección entre los 3 mejores |
+| CU-05 Aceptar o rechazar | Receptor | Rechazo con motivo y reasignación automática sin repetir al que rechazó |
+| CU-06 Recibir avisos | Todos | Panel "🔔 Avisos" con cada cambio de estado que les toca |
+| CU-07 Ruta y tomar donativos | Recolector | El Agente Logístico agrupa los donativos cercanos que caben en su transporte y ordena las paradas; la toma es atómica |
+| CU-08 Confirmar la entrega | Recolector | Solo el voluntario que lleva el donativo |
+| CU-09 Constancia de entrega | Donante, receptor, coordinador | PDF con folio, alimentos, kg, raciones, CO2e y dictamen |
+| CU-10 Pronósticos | Donante, receptor | El Agente Predictor detecta patrones ("los lunes sobran guisados"), avisa y pre-reserva receptor; "Publicar ahora" desde el pronóstico |
+| CU-11 Atender casos | Coordinador | Bandeja por tipo (sin receptor, posible inyección, inocuidad dudosa, vencido, rechazos repetidos) con reintentar, asignar a mano, cancelar y resolver |
+| CU-12 Participantes | Coordinador; el receptor edita su perfil | Alta con PIN, edición, asignar PIN y baja (no se borra a quien tiene historial) |
+| CU-13 Tablero de impacto | Coordinador; donante y receptor ven lo suyo | Kg, raciones y CO2e por periodo, donante y receptor; reporte ESG en PDF |
+| CU-14 Historial y bitácora | Coordinador; donante los suyos | Transiciones de estado y razonamiento de cada agente |
+| CU-15 Cancelar | Donante | Mientras ningún receptor lo haya aceptado |
+
+El LLM decide; las herramientas calculan. La evaluación de inocuidad orienta; no constituye
+certificación sanitaria. Los participantes de la demo son ficticios.
 
 ## Arquitectura
 
-![Arquitectura del MVP](docs/img/arquitectura_mvp.png)
+<!-- PENDIENTE: imagen docs/img/arquitectura_final.png, se genera con herramientas_docs (Gilberto). -->
+> **Imagen de arquitectura final: pendiente** (`docs/img/arquitectura_final.png`). Mientras tanto,
+> el diagrama de componentes está en [docs/uml/componentes.png](docs/uml/componentes.png).
 
 | Capa | Carpeta | Qué hace |
 | --- | --- | --- |
-| Interfaz | `app.py`, `ui/` | Streamlit con selector de rol (donante, receptor, recolector, coordinador) |
-| Servicios | `rescate/servicios/` | Lo único que usa la interfaz: `ServicioParticipantes`, `ServicioPublicacion` y `ServicioDistribucion` (una responsabilidad cada uno), más reportes, avisos, casos y pronósticos. Cada operación recibe el `Actor` y lo valida contra la base |
-| Ciclo de vida y eventos | `rescate/servicios/ciclo_vida.py`, `eventos.py` | Aplica las transiciones (State), guarda el historial y publica eventos (Observer) |
-| Mediador | `rescate/mediador.py` | Lleva los casos dudosos o sin receptor a la bandeja del coordinador (Mediator) |
+| Interfaz | `app.py`, `ui/` | Streamlit: entrada con PIN y una página por rol. Solo usa `Servicios` y siempre pasa el `Actor` de la sesión |
+| Servicios | `rescate/servicios/` | `ServicioParticipantes`, `ServicioPublicacion` y `ServicioDistribucion` (una responsabilidad cada uno, observación SRP), más reportes, avisos, casos y pronósticos. Cada operación valida el `Actor` contra la base |
+| Ciclo de vida y eventos | `rescate/servicios/ciclo_vida.py`, `eventos.py` | Transiciones (State), historial y eventos (Observer) que escuchan el notificador y el mediador |
+| Mediador | `rescate/mediador.py` | Casos para el coordinador (Mediator); abre, no duplica y resuelve solo |
 | Orquestador | `rescate/orquestador.py` | Grafo de LangGraph: interpretar → evaluar → asignar |
-| Agentes | `rescate/agentes/` | Intérprete, Inocuidad y Asignador, con bitácora de razonamiento |
-| Herramientas | `rescate/herramientas/` | Cálculos deterministas: distancia, capacidad, puntuación |
-| RAG | `rescate/rag/` | Búsqueda en la NOM-251-SSA1-2009 y criterios de donación |
-| LLM | `rescate/llm/` | Abstracción del LLM; implementación con Ollama y una falsa para pruebas |
+| Agentes | `rescate/agentes/` | Intérprete, Inocuidad, Asignador (ReAct), Logístico y Predictor, con bitácora y respaldo determinista |
+| Herramientas | `rescate/herramientas/` | Cálculos deterministas: distancia, capacidad, horario, equidad, compatibilidad, puntuación, rutas, impacto y patrones |
+| Documentos | `rescate/documentos/` | Constancia y reporte ESG en PDF (Template Method) |
+| RAG | `rescate/rag/` | Búsqueda en la NOM-251-SSA1-2009 y criterios de donación (FAISS + `nomic-embed-text`) |
+| LLM | `rescate/llm/` | `ClienteLLM` con Ollama y un cliente falso para pruebas |
 | Persistencia | `rescate/persistencia/` | Repositorios sobre DuckDB |
+| Composición | `rescate/contenedor.py` | Único lugar donde se crean y conectan las piezas |
 
-## Pruebas
-
-```powershell
-python -m pytest
-python scripts/evaluar_interprete.py           # calidad del Intérprete con el LLM de .env
-python scripts/evaluar_interprete.py --reglas  # línea base: solo reglas, sin LLM
-```
-
-Verificación local del 5 y 6 de noviembre de 2026:
-
-| Comprobación | Resultado |
-| --- | --- |
-| Suite con cliente simulado | 171 pruebas aprobadas; incluye `test_flujo_basico.py` |
-| Cobertura (coverage.py) | 92 % de `rescate/` y `ui/`; la lógica determinista (herramientas, reglas y estados), entre 96 y 100 % |
-| Inocuidad | 51 casos en `tests/casos_inocuidad.json`: los 35 no aptos se rechazan, ninguno sale aprobado (meta de la visión: 30 no aptos) |
-| Intérprete con `gemma4:e4b` | 20 frases de `tests/frases_interprete.json`: 160 de 160 campos correctos (100 %, igual en 3 corridas; meta de la visión: 90 %). Las reglas de respaldo solas logran 73 %. Es una muestra chica y 3 frases se parecen a los ejemplos del prompt |
-| Guion en la interfaz con `gemma4:e4b` | Escenas 2 a 6 de punta a punta con AppTest y Ollama real: aclaración, no apto, rechazo y reasignación, recolección, entrega y coordinador |
-| AppTest de Streamlit | Cuatro roles; rechazo con motivo, reasignación, aceptación, recolección, entrega, perfiles, altas, métricas, historial y filtros |
-| Restricciones del asignador | Un no apto no se asigna; un id inventado o un receptor existente fuera del top 3 activa el respaldo |
-| Ollama real, por la fachada de servicios | Nueve consultas con `gemma4:26b`, sin errores ni respaldo: entrega tras reasignación, leche no apta y aclaración de pollo refrigerado |
-| RAG real | 24 fragmentos con `nomic-embed-text` y FAISS; búsqueda de refrigeración comprobada |
-| Revisión visual en navegador | Hecha al grabar el video demo con `gemma4:e4b`, con las cuatro pantallas |
-
-Entorno verificado: Python 3.13.7, Streamlit 1.67.0, DuckDB 2.0.0, Pydantic 2.14.3,
-LangGraph 1.2.20, cliente Ollama 0.6.3 y pytest 9.2.0. Ruff comprobó imports,
-estilo y errores estáticos de los archivos del flujo de asignación.
-
-Ollama ejecutó `gemma4:26b` en CPU. Las consultas individuales del ensayo tardaron
-entre 18 y 138 segundos; una publicación puede tardar varios minutos al encadenar
-los agentes. El video se grabó con `gemma4:e4b`: con el modelo ya cargado, cada
-publicación tarda unos 5 segundos.
-
-## Funcionalidad del MVP
-
-1. Publicar un excedente en lenguaje natural y responder preguntas de aclaración.
-2. Evaluar inocuidad con reglas y recuperación documental; rechazar alimentos no aptos.
-3. Clasificar receptores por distancia (35%), capacidad (25%), horario (25%) y equidad (15%).
-   El modelo puede elegir entre los tres mejores compatibles; una salida inválida o un fallo
-   activa el respaldo de mayor puntaje. Con un candidato no se consulta al modelo.
-4. El receptor acepta o rechaza con motivo; al rechazar, se busca otro sin repetir el descartado.
-5. Un recolector toma un donativo aceptado y registra su entrega.
-6. El coordinador registra participantes, revisa casos sin receptor, métricas e historial.
-7. La bitácora muestra decisiones, herramientas, resultados y fallos.
-
-El LLM decide; las herramientas calculan. La app usa datos ficticios y un selector de roles,
-sin autenticación. La evaluación de inocuidad orienta; no constituye certificación sanitaria.
-
-### Publicar y evaluar: Intérprete e Inocuidad
-
-- **Intérprete.** El LLM convierte la frase del donante en alimentos con un esquema Pydantic. Si a
-  un perecedero le falta la hora de preparación o cómo se ha conservado, hace una sola pregunta
-  (máximo dos rondas). Los kilos, las horas ("hace una hora") y el límite de recogida los calcula
-  el código.
-- **Reglas de inocuidad.** Una cadena de 7 reglas deterministas (Chain of Responsibility, criterios
-  CI-01 a CI-07: deterioro, empaque, más de 2 h sin control de temperatura, origen desconocido,
-  cadena de frío, comida caliente y vida útil). Si dicen no apto, ahí termina: el LLM no se
-  consulta, porque nunca puede relajar un dictamen.
-- **RAG.** Si el alimento pasa las reglas, el agente busca en extractos textuales de la
-  NOM-251-SSA1-2009 (copiados del Diario Oficial de la Federación) y en los criterios del
-  proyecto, con `nomic-embed-text` y FAISS; el LLM puede mantener o endurecer el dictamen.
-- **Sin numerales inventados.** Solo se aceptan las citas del LLM que coinciden con la sección de
-  un fragmento recuperado; las demás se descartan y quedan anotadas en la bitácora.
-
-## Modelos y datos
-
-Los perfiles se configuran en `.env`: `ligero`, `completo` o `minimo`. Los nombres exactos
-están en `.env.example` y `rescate/config.py`. También se puede configurar `MODELO_LLM`.
-Comprueba los modelos instalados con `ollama list`. Para trabajar sin modelo,
-usa `USAR_LLM_FALSO=1`; este modo comprueba reglas y pantallas, no demuestra decisiones de IA real.
-
-| Perfil | Modelo configurado |
-| --- | --- |
-| `ligero` | `gemma4:e4b` |
-| `completo` | `gemma4:26b` |
-| `minimo` | `gemma4:e2b` |
-
-`MODELO_LLM` tiene prioridad sobre el perfil. Los embeddings usan `nomic-embed-text`.
-
-Con Streamlit detenido, `python scripts/cargar_semilla.py` incorpora los 15 participantes
-ficticios. `--reiniciar` borra la base de demostración: úsalo solo si deseas empezar de cero.
-Para preparar la recuperación documental, ejecuta `python scripts/indexar_conocimiento.py`.
-La instalación y el primer uso de modelos requieren internet; las teselas del mapa también.
+Detalle, recorridos y decisiones: [docs/arquitectura.md](docs/arquitectura.md). Diagramas UML 2.5
+(casos de uso, componentes, clases y secuencias): [docs/uml/](docs/uml/README.md).
 
 ## Patrones de diseño
 
-| Patrón | Implementación |
+| Patrón | Dónde |
 | --- | --- |
-| State | Ciclo de vida en `rescate/dominio/estados.py` |
-| Facade | `ServicioDonativos`, utilizado por las pantallas |
-| Repository | Persistencia en DuckDB |
-| Strategy | Criterios de puntuación intercambiables |
-| Chain of Responsibility | Reglas de inocuidad |
-| Inversión de dependencias | Cliente LLM y repositorios por interfaces |
-| Orquestación por grafo | LangGraph encadena los agentes |
-| Raíz de composición | `rescate/contenedor.py` crea y conecta todas las piezas |
+| State | `rescate/dominio/estados.py` |
+| Repository | `rescate/persistencia/repositorios.py` |
+| Strategy (puntuación) | `rescate/herramientas/puntuacion.py` |
+| Strategy (rutas) | `rescate/herramientas/rutas.py` |
+| Strategy (canal de avisos) | `CanalAvisos` en `rescate/servicios/notificaciones.py` |
+| Chain of Responsibility | `rescate/agentes/reglas_inocuidad.py` |
+| Observer | `BusEventos` y `NotificadorEstados` en `rescate/servicios/` |
+| Mediator | `MediadorCasos` en `rescate/mediador.py` |
+| Template Method | `GeneradorDocumento` en `rescate/documentos/base.py` |
+| ReAct | `AgenteAsignador` en `rescate/agentes/asignador.py` |
+| Inversión de dependencias | `ClienteLLM`, `BaseConocimiento`, repositorios y `CanalAvisos` |
+| Orquestación por grafo | `rescate/orquestador.py` |
+| Raíz de composición | `rescate/contenedor.py` |
+| SRP en servicios | `rescate/servicios/` (el antiguo `ServicioDonativos` se dividió) |
 
-Dónde vive cada patrón y cómo extenderlo: [docs/arquitectura.md](docs/arquitectura.md).
+## Observaciones del profesor a la segunda entrega
+
+| Observación | Cómo se atendió | Pruebas |
+| --- | --- | --- |
+| **SRP:** `ServicioDonativos` hacía participantes, publicación, asignación y entregas | Se dividió en `ServicioParticipantes`, `ServicioPublicacion` y `ServicioDistribucion`, más servicios de reportes, avisos, casos y pronósticos; `Servicios` solo los agrupa | `tests/test_autorizacion.py` (ningún módulo usa `ServicioDonativos`) |
+| **Autorización:** el rol se elegía en la barra lateral y dos voluntarios podían tomar el mismo donativo | Cada servicio recibe el `Actor` y lo valida contra la base; la toma es atómica (`UPDATE … WHERE estado='asignado' AND recolector_id IS NULL`). Además, inicio de sesión con PIN: el rol ya no se elige | `tests/test_autorizacion.py` (rol falso, dos hilos con `Barrier`), `tests/test_sesion.py` |
+| **Prompt injection** en el Intérprete | El texto del usuario se limpia y se delimita como dato (`seguridad_prompt.py`); se detectan intentos, se valida la respuesta del LLM con `detectar_conservacion()`, y se abre un caso para el coordinador | `tests/test_seguridad_prompt.py`; 0 de 10 manipulaciones exitosas con `gemma4:e4b` |
+
+## Verificación
+
+```powershell
+python -m pytest                                      # sin Ollama (USAR_LLM_FALSO=1)
+python scripts/evaluar_interprete.py                  # 50 frases con el LLM de .env
+python scripts/evaluar_interprete.py --adversariales  # 10 intentos de manipulación
+python scripts/medir_rendimiento.py                   # metas de rendimiento → docs/rendimiento.md
+```
+
+| Comprobación | Resultado |
+| --- | --- |
+| Suite con cliente simulado | 370 pruebas aprobadas, incluida `test_flujo_basico.py`; CI en GitHub Actions |
+| Cobertura (coverage.py) | 96 % de `rescate/`, `ui/` y `app.py` |
+| Intérprete con `gemma4:e4b` | 50 frases: 405 de 405 campos correctos (100 %; meta 90 %). Con `gemma4:26b`: 99.8 % |
+| Prompt injection | 10 frases adversariales: 0 manipulaciones exitosas con `gemma4:e4b` y con `gemma4:26b` |
+| Inocuidad | 51 casos: los 35 no aptos se rechazan (meta de la visión: 30) |
+| Rendimiento | Tablero con un año de historial: 0.015 s (meta 3 s); RAG: p95 0.03 s (meta 2 s); 10 publicaciones simultáneas sin pérdidas. Frase → asignación con `gemma4:e4b`: ver [docs/rendimiento.md](docs/rendimiento.md) |
+| Usabilidad | Protocolo con 5 personas en [docs/prueba_usabilidad.md](docs/prueba_usabilidad.md) |
+
+## Impacto: fuentes de los factores
+
+- Raciones: 0.42 kg por comida equivalente, WRAP (2020), guía de comidas equivalentes.
+- Emisiones evitadas: 2.06 kg CO2e por kg, FAO (2013), *Food Wastage Footprint* (3.3 Gt CO2e / 1.6 Gt).
+
+Ligas y detalle en [docs/arquitectura.md](docs/arquitectura.md#tablero-de-impacto-y-sus-fuentes).
+
+## Modelos y datos
+
+| Perfil (`PERFIL_MODELO`) | Modelo |
+| --- | --- |
+| `ligero` (por omisión, el del video) | `gemma4:e4b` |
+| `completo` | `gemma4:26b` |
+| `minimo` | `gemma4:e2b` |
+
+`MODELO_LLM` tiene prioridad sobre el perfil. Los embeddings usan `nomic-embed-text`. Todo corre
+en local: no se envían datos a servicios de IA externos. Las teselas del mapa necesitan internet.
 
 ## Operación y sostenibilidad
 
 Una organización operadora (un municipio o una ONG, idealmente donataria autorizada o aliada de
-un banco de alimentos que lo sea) instala y opera la red. Los patrocinadores con metas ESG
-(ambientales, sociales y de gobernanza) financian la operación a cambio de reportes de impacto:
-kilos rescatados y entregados, que la plataforma ya registra. Para donantes, comedores y
-voluntarios es gratis.
+un banco de alimentos) instala y opera la red. Los patrocinadores con metas ESG financian la
+operación a cambio del reporte de impacto que la plataforma genera. Para donantes, comedores y
+voluntarios es gratis. Los comercios tienen razones legales para participar: la Ley General de
+la Alimentación Adecuada y Sostenible (art. 55) prohíbe desechar alimentos aptos, y la LISR
+(art. 27, fr. XX) permite deducir la mercancía si antes se ofreció en donación. La constancia de
+entrega sirve de respaldo, pero no es un comprobante fiscal (CFDI).
 
-Los comercios tienen razones legales para participar:
+## Límites y trabajo futuro
 
-- La Ley General de la Alimentación Adecuada y Sostenible (DOF 17-04-2024), art. 55, prohíbe que
-  los establecimientos comerciales desechen alimentos que se encuentren en condiciones de ser
-  consumidos por los seres humanos, en los términos de su Reglamento.
-- La Ley del Impuesto sobre la Renta, art. 27, fracción XX, permite deducir la mercancía que perdió
-  su valor; tratándose de bienes básicos de alimentación, antes de destruirla debe ofrecerse en
-  donación a instituciones autorizadas para recibir donativos deducibles.
-
-Es una propuesta de operación: el MVP no tramita deducciones ni tiene acuerdos firmados, y el
-beneficio fiscal depende del régimen de cada comercio y de que el receptor sea donataria autorizada.
-
-## Límites y trabajo pendiente
-
-- Horario y capacidad reducen puntaje, pero no excluyen candidatos. Por ello, una asignación
-  es una propuesta que el receptor debe revisar: no garantiza espacio ni disponibilidad.
-- Las distancias son en línea recta; no hay optimización vial ni estimación del tiempo de viaje.
-- El servidor debe usar la hora local del centro de México: la base actual guarda horas sin zona.
-- No hay login, notificaciones externas, predicción, comprobantes ni control de concurrencia
-  diseñado para producción. No utilizar para coordinar donaciones reales sin revisión adicional.
-- La versión implementa selección entre candidatos; el ciclo ReAct de varios pasos
-  queda fuera de esta entrega.
-- Mediciones pendientes: usabilidad con 5 usuarios externos y rendimiento en 20 corridas por
-  perfil (sección 10 de [docs/vision_y_alcances.md](docs/vision_y_alcances.md)).
-- Para la entrega final del 24 de noviembre: UML de casos de uso, componentes, clases y
-  secuencias; consolidación del alcance y video de todos los casos implementados.
-
-## Video demo
-
-[Ver el video en YouTube](https://youtu.be/A0HnOscPrOA). Se grabó con `gemma4:e4b` y recorre:
-
-1. Contexto general del proyecto.
-2. Problema, usuarios y ODS.
-3. El donante publica un pollo en mole: el Intérprete pregunta lo que falta, Inocuidad lo
-   dictamina apto con condiciones y el Asignador justifica su elección. Bitácora de los agentes.
-4. Variedad del Intérprete: varios alimentos en una frase, comida caliente y lenguaje coloquial.
-5. Alimentos no aptos: leche fuera del refrigerador (CI-02) y tamales agrios (CI-01).
-6. El receptor rechaza con motivo, el sistema reasigna solo y el nuevo receptor acepta.
-7. Recolección y entrega.
-8. Cancelación, caso sin receptor, alta de un comedor y reintento de la asignación.
-9. Coordinación: métricas, historial de estados y bitácora.
+- Distancias en línea recta; no hay ruteo vial ni tráfico.
+- Avisos solo dentro de la app; WhatsApp o correo serían otra implementación de `CanalAvisos`.
+- El bloqueo por intentos fallidos y el conteo de rechazos repetidos viven en memoria.
+- El factor de emisiones es un promedio mundial, igual para todos los tipos de alimento.
+- El servidor debe usar la hora local del centro de México (la base guarda horas sin zona).
+- No usar para coordinar donaciones reales sin revisión legal y sanitaria adicional.
 
 ## Documentación
 
-| Documento | Contenido |
-| --- | --- |
-| [docs/entrega2.md](docs/entrega2.md) | Texto de la segunda entrega |
-| [docs/vision_y_alcances.md](docs/vision_y_alcances.md) | Documento de Visión y Alcances, versión 2, ajustado a lo que quedó en el MVP ([.docx](docs/Vision_y_Alcances_Rescate_Alimentario_v2.docx)) |
-| [docs/arquitectura.md](docs/arquitectura.md) | Capas, recorrido de un donativo, ciclo de vida y patrones de diseño |
-| [docs/manual_de_uso.md](docs/manual_de_uso.md) | Cómo usar cada rol, frases de prueba y problemas comunes |
+Índice completo en [docs/README.md](docs/README.md): visión y alcances, arquitectura, UML, manual
+de uso, rendimiento, usabilidad, aviso de privacidad y texto de entrega.
 
 ## Licencia
 
 El código se publica bajo la [licencia MIT](LICENSE). Los modelos (`gemma4` y `nomic-embed-text`)
-conservan sus propias licencias y condiciones de uso, que se consultan en la
-[biblioteca de Ollama](https://ollama.com/library).
+conservan sus propias licencias, que se consultan en la [biblioteca de Ollama](https://ollama.com/library).
 
 ## Equipo
 
-- Gilberto Anaya Mercado: publicar y evaluar (Intérprete, Inocuidad, RAG y página del donante).
-- Alejandro Ortega Abbadie: asignar y entregar (Asignador, herramientas, datos de demostración y
-  páginas de receptor, recolector y coordinador).
+- Gilberto Anaya Mercado: publicar y evaluar (Intérprete, seguridad del prompt, Inocuidad, RAG,
+  Agente Predictor y página del donante) y el contrato de servicios divididos.
+- Alejandro Ortega Abbadie: asignar y entregar (Asignador ReAct, Agente Logístico y rutas,
+  notificaciones, mediador de casos, impacto y documentos, inicio de sesión, páginas de receptor,
+  recolector y coordinador), UML y documentación.
