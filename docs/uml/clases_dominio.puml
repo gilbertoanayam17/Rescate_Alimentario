@@ -1,6 +1,7 @@
 @startuml clases_dominio
 ' Diagrama de clases del dominio (UML 2.5): modelos, enums, estados (State) y repositorios.
 !pragma layout smetana
+left to right direction
 skinparam shadowing false
 skinparam classAttributeIconSize 0
 hide empty members
@@ -129,12 +130,24 @@ package "rescate.dominio.modelos" {
 }
 
 package "rescate.dominio.enums" {
-  enum Rol { DONANTE\nRECEPTOR\nRECOLECTOR\nCOORDINADOR }
-  enum EstadoDonativo { PUBLICADO\nEVALUADO\nASIGNADO\nEN_RECOLECCION\nENTREGADO\nRECHAZADO\nEXPIRADO\nCANCELADO }
-  enum Evento { EVALUAR_APTO\nEVALUAR_NO_APTO\nASIGNAR\nLIBERAR\nINICIAR_RECOLECCION\nENTREGAR\nEXPIRAR\nCANCELAR }
-  enum Dictamen { APTO\nAPTO_CON_CONDICIONES\nNO_APTO }
-  enum TipoAlimento { PREPARADO\nPANADERIA\nFRUTA_VERDURA\nLACTEO\nCARNE_PESCADO\nABARROTE\nBEBIDA\nOTRO }
-  enum TipoCaso { SIN_RECEPTOR\nPOSIBLE_INYECCION\nINTERPRETACION_CORREGIDA\nINOCUIDAD_DUDOSA\nRECOLECCION_VENCIDA\nRECHAZOS_REPETIDOS }
+  enum Rol {
+    DONANTE\nRECEPTOR\nRECOLECTOR\nCOORDINADOR
+  }
+  enum EstadoDonativo {
+    PUBLICADO\nEVALUADO\nASIGNADO\nEN_RECOLECCION\nENTREGADO\nRECHAZADO\nEXPIRADO\nCANCELADO
+  }
+  enum Evento {
+    EVALUAR_APTO\nEVALUAR_NO_APTO\nASIGNAR\nLIBERAR\nINICIAR_RECOLECCION\nENTREGAR\nEXPIRAR\nCANCELAR
+  }
+  enum Dictamen {
+    APTO\nAPTO_CON_CONDICIONES\nNO_APTO
+  }
+  enum TipoAlimento {
+    PREPARADO\nPANADERIA\nFRUTA_VERDURA\nLACTEO\nCARNE_PESCADO\nABARROTE\nBEBIDA\nOTRO
+  }
+  enum TipoCaso {
+    SIN_RECEPTOR\nPOSIBLE_INYECCION\nINTERPRETACION_CORREGIDA\nINOCUIDAD_DUDOSA\nRECOLECCION_VENCIDA\nRECHAZOS_REPETIDOS
+  }
 }
 
 package "rescate.dominio.estados (State)" {

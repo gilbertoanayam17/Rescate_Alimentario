@@ -14,8 +14,8 @@ Fuente en PlantUML (`.puml`) y su imagen (`.png`) con el mismo nombre. Los nombr
 
 ## Cómo regenerar los PNG
 
-Con Java instalado y el jar de PlantUML (o la extensión de PlantUML de VS Code). Los diagramas de clases, componentes y casos de uso usan `!pragma layout smetana`, así que no hace falta Graphviz:
+Con Java instalado y el jar de PlantUML 1.2026.9 o posterior (las versiones de 2024 recortan los diagramas con `smetana`). Los diagramas de clases, componentes y casos de uso usan `!pragma layout smetana`, así que no hace falta Graphviz. El límite de tamaño se sube porque los diagramas de clases pasan de 4096 px:
 
 ```powershell
-java -jar plantuml.jar -tpng docs/uml/*.puml
+java -DPLANTUML_LIMIT_SIZE=8192 -jar plantuml.jar -charset UTF-8 -tpng docs/uml/*.puml
 ```
