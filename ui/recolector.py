@@ -23,6 +23,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
         return
     if "recolector_aviso" in st.session_state:
         st.success(st.session_state.pop("recolector_aviso"))
+    servicios.distribucion.vencer_pendientes()
     propios = servicios.distribucion.donativos_de_recolector(actor)
     tabs = st.tabs(["Listos para recoger", "En curso", "Historial"])
     with tabs[0]:

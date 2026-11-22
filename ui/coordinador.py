@@ -1,4 +1,4 @@
-"""Administración de participantes, casos pendientes y trazabilidad."""
+"""Administración de participantes, bandeja de casos (CAR-10), pronósticos y trazabilidad."""
 
 from collections import Counter
 from datetime import time
@@ -6,7 +6,7 @@ from datetime import time
 import streamlit as st
 
 from rescate.dominio.enums import EstadoDonativo as E
-from rescate.dominio.enums import Rol, TipoAlimento
+from rescate.dominio.enums import Rol, TipoAlimento, TipoCaso
 from rescate.dominio.modelos import (
     Actor,
     Donante,
@@ -15,6 +15,7 @@ from rescate.dominio.modelos import (
     Ubicacion,
     ahora,
 )
+from rescate.mediador import TITULO_CASO
 from rescate.servicios import ErrorServicio, Servicios
 from ui.componentes_prediccion import tarjeta_pronostico
 from ui.comun import (
@@ -31,6 +32,11 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
     st.header("Coordinación")
     if "coordinador_aviso" in st.session_state:
         st.success(st.session_state.pop("coordinador_aviso"))
+    vencidos = servicios.distribucion.vencer_pendientes()
+    if vencidos:
+        st.warning(
+            f"{len(vencidos)} donativo(s) vencieron sin recogerse; revisa la pestaña Casos."
+        )
     todos = servicios.reportes.todos(actor)
     pendientes = [
         d
@@ -42,14 +48,14 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
         [
             "Resumen",
             "Donativos",
-            "Sin receptor",
+            "Casos",
             "Participantes",
             "Pronósticos",
             "Bitácora",
         ]
     )
     with tabs[0]:
-        cols = st.columns(4)
+        cols = st.columns(5)
         cols[0].metric(
             "Kg entregados", sum(d.kg_totales for d in todos if d.estado == E.ENTREGADO)
         )
@@ -62,6 +68,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
         )
         cols[2].metric("No aptos", sum(d.estado == E.RECHAZADO for d in todos))
         cols[3].metric("Sin receptor", len(pendientes))
+        cols[4].metric("Casos abiertos", len(servicios.casos.abiertos(actor)))
         conteo = Counter(ETIQUETA_ESTADO[d.estado][0] for d in todos)
         if conteo:
             st.bar_chart(dict(conteo))
@@ -81,17 +88,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                 with st.expander(f"Historial {d.id}"):
                     historial_estados(servicios, actor, d.id)
     with tabs[2]:
-        if not pendientes:
-            st.info("No hay casos pendientes de asignación.")
-        for d in pendientes:
-            tarjeta_donativo(servicios, actor, d)
-            if st.button("Reintentar asignación", key=f"coordinador_reintentar_{d.id}"):
-                try:
-                    servicios.distribucion.reintentar_asignacion(actor, d.id)
-                    st.session_state.coordinador_aviso = "Asignación reevaluada."
-                    st.rerun()
-                except ErrorServicio as exc:
-                    st.error(str(exc))
+        bandeja_casos(servicios, actor)
     with tabs[3]:
         for rol in (Rol.DONANTE, Rol.RECEPTOR, Rol.RECOLECTOR):
             st.subheader(rol.value.capitalize())
@@ -249,3 +246,86 @@ def pronosticos_del_dia(servicios: Servicios, actor: Actor) -> None:
             nombre_donante=donante.nombre if donante else None,
             nombre_receptor=receptor.nombre if receptor else None,
         )
+
+
+ACTIVOS = {E.PUBLICADO, E.EVALUADO, E.ASIGNADO, E.EN_RECOLECCION}
+
+
+def bandeja_casos(servicios: Servicios, actor: Actor) -> None:
+    """Casos escalados por los agentes, agrupados por tipo, con sus acciones."""
+    casos = servicios.casos.abiertos(actor)
+    if not casos:
+        st.info("No hay casos abiertos.")
+        return
+    atendidos: set[str] = set()  # un donativo con varios casos muestra sus acciones una vez
+    for tipo in TipoCaso:
+        del_tipo = [c for c in casos if c.tipo == tipo]
+        if not del_tipo:
+            continue
+        st.subheader(f"{TITULO_CASO[tipo]} ({len(del_tipo)})")
+        for caso in del_tipo:
+            with st.container(border=True):
+                st.markdown(
+                    f"**{caso.emisor}** · {caso.creado:%d/%m %H:%M} — {caso.motivo}"
+                )
+                donativo = (
+                    servicios.reportes.donativo(actor, caso.donativo_id)
+                    if caso.donativo_id
+                    else None
+                )
+                if donativo and donativo.id not in atendidos:
+                    atendidos.add(donativo.id)
+                    tarjeta_donativo(servicios, actor, donativo)
+                    acciones_donativo(servicios, actor, donativo)
+                resolver_caso(servicios, actor, caso.id)
+
+
+def acciones_donativo(servicios: Servicios, actor: Actor, donativo) -> None:
+    """Reintentar, asignar a mano o cancelar el donativo de un caso."""
+    try:
+        if donativo.estado == E.EVALUADO:
+            if st.button("Reintentar asignación", key=f"coordinador_reintentar_{donativo.id}"):
+                servicios.distribucion.reintentar_asignacion(actor, donativo.id)
+                st.session_state.coordinador_aviso = "Asignación reevaluada."
+                st.rerun()
+            compatibles = servicios.distribucion.receptores_compatibles(actor, donativo.id)
+            if compatibles:
+                receptor = st.selectbox(
+                    "Asignar manualmente a",
+                    compatibles,
+                    format_func=lambda r: r.nombre,
+                    key=f"coordinador_manual_receptor_{donativo.id}",
+                )
+                motivo = st.text_input(
+                    "Motivo de la asignación manual",
+                    key=f"coordinador_manual_motivo_{donativo.id}",
+                )
+                if st.button("Asignar", key=f"coordinador_manual_{donativo.id}"):
+                    servicios.distribucion.asignar_manual(
+                        actor, donativo.id, receptor.id, motivo
+                    )
+                    st.session_state.coordinador_aviso = f"Asignado a {receptor.nombre}."
+                    st.rerun()
+            else:
+                st.caption("Ningún receptor registrado es compatible con este donativo.")
+        if donativo.estado in ACTIVOS and st.button(
+            "Cancelar donativo", key=f"coordinador_cancelar_{donativo.id}"
+        ):
+            servicios.publicacion.cancelar(
+                actor, donativo.id, "Cancelado por la coordinación"
+            )
+            st.session_state.coordinador_aviso = "Donativo cancelado."
+            st.rerun()
+    except ErrorServicio as exc:
+        st.error(str(exc))
+
+
+def resolver_caso(servicios: Servicios, actor: Actor, caso_id: str) -> None:
+    nota = st.text_input("Nota de resolución", key=f"coordinador_nota_{caso_id}")
+    if st.button("Marcar como resuelto", key=f"coordinador_resolver_{caso_id}"):
+        try:
+            servicios.casos.resolver(actor, caso_id, nota)
+            st.session_state.coordinador_aviso = "Caso resuelto."
+            st.rerun()
+        except ErrorServicio as exc:
+            st.error(str(exc))

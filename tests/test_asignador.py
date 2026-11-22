@@ -339,7 +339,9 @@ def test_recolector_no_toma_donativo_vencido(aplicacion, donante, receptores, re
     d.recoger_antes_de = ahora() - timedelta(seconds=1)
     aplicacion.repos.donativos.guardar(d)
     app = _pantalla(aplicacion, "recolector", recolector)
-    assert app.button(key=f"recolector_recoger_{d.id}").disabled
+    # Al abrir la página se vence: ya no se ofrece y pasa a la bandeja del coordinador.
+    assert not [b for b in app.button if b.key == f"recolector_recoger_{d.id}"]
+    assert aplicacion.repos.donativos.obtener(d.id).estado.value == "expirado"
 
 
 def test_recolector_no_disponible_no_toma_donativo(
