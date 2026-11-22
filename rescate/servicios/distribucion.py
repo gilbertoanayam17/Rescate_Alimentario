@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from rescate.agentes.logistico import AgenteLogistico
-from rescate.dominio.enums import EstadoDonativo, Evento, Rol, TipoCaso
+from rescate.dominio.enums import EstadoDonativo, Evento, Rol, TipoCaso, TipoEntradaBitacora
 from rescate.dominio.estados import TransicionInvalida, aplicar_evento
 from rescate.dominio.modelos import Actor, Asignacion, Donativo, Receptor, Recolector, ahora
 from rescate.herramientas.compatibilidad import evaluar_compatibilidad
@@ -20,6 +20,11 @@ from .ciclo_vida import CicloDeVida
 from .errores import ErrorAutorizacion, ErrorServicio
 
 YA_TOMADO = "Otro voluntario ya tomó este donativo."
+
+
+def donativo_vencido(donativo: Donativo) -> str:
+    """Motivo del caso de un donativo que venció sin recogerse."""
+    return f"Venció sin recogerse: {donativo.resumen()} ({donativo.kg_totales:g} kg)."
 
 
 class ServicioDistribucion:
@@ -78,7 +83,16 @@ class ServicioDistribucion:
                 raise ErrorServicio("Solo se pueden reasignar donativos evaluados sin receptor.")
             return self._reasignar(donativo, actor)
 
+    def receptores_compatibles(self, actor: Actor | None, donativo_id: str) -> list[Receptor]:
+        """Coordinador: los receptores a los que se puede asignar a mano este donativo."""
+        exigir_rol(actor, Rol.COORDINADOR)
+        donativo = self._obtener(donativo_id)
+        return [
+            r for r in self._participantes.receptores() if evaluar_compatibilidad(donativo, r).compatible
+        ]
+
     def asignar_manual(self, actor: Actor | None, donativo_id: str, receptor_id: str, motivo: str) -> Donativo:
+        """Coordinador: asigna a un receptor compatible y deja la decisión en la bitácora."""
         exigir_rol(actor, Rol.COORDINADOR)
         with self._candado:
             donativo = self._obtener(donativo_id)
@@ -90,16 +104,36 @@ class ServicioDistribucion:
             compatibilidad = evaluar_compatibilidad(donativo, receptor)
             if not compatibilidad.compatible:
                 raise ErrorServicio("No es compatible: " + "; ".join(compatibilidad.motivos))
-            asignacion = Asignacion(
-                receptor_id=receptor.id,
-                justificacion=f"Asignación manual del coordinador: {motivo.strip() or 'sin motivo'}",
+            justificacion = (
+                f"Asignación manual del coordinador a {receptor.nombre}: {motivo.strip() or 'sin motivo'}"
             )
+            asignacion = Asignacion(receptor_id=receptor.id, justificacion=justificacion)
             self._ciclo.aplicar_asignacion(donativo, asignacion, actor)
+            self._orquestador.asignador.bitacora.registrar(
+                "Coordinador", TipoEntradaBitacora.RESULTADO, justificacion, donativo.id
+            )
             return donativo
 
     def vencer_pendientes(self) -> list[Donativo]:
-        """Expira los donativos cuyo plazo de recolección pasó (lo completa la tarea A2)."""
-        return []
+        """Mueve a EXPIRADO los EVALUADO o ASIGNADO cuyo plazo de recolección ya pasó y abre un
+        caso RECOLECCION_VENCIDA por cada uno. La llaman las páginas del coordinador y del
+        recolector al abrirse."""
+        momento = self._reloj()
+        vencidos = []
+        with self._candado:
+            for estado in (EstadoDonativo.EVALUADO, EstadoDonativo.ASIGNADO):
+                for donativo in self._donativos.listar(estado):
+                    limite = limite_recoleccion(donativo, momento)
+                    if limite > momento:
+                        continue
+                    motivo = f"Nadie lo recogió antes de {limite:%d/%m %H:%M}"
+                    self._ciclo.transicionar(donativo, Evento.EXPIRAR, motivo)
+                    vencidos.append(donativo)
+        for donativo in vencidos:
+            self._mediador.notificar(
+                "Distribución", TipoCaso.RECOLECCION_VENCIDA, donativo.id, donativo_vencido(donativo)
+            )
+        return vencidos
 
     # ---------------------------------------------------------------- recolector
 
