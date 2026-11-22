@@ -9,7 +9,7 @@ import streamlit as st
 
 from rescate.dominio.enums import Dictamen, EstadoDonativo, TipoEntradaBitacora
 from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora
-from rescate.servicios import Servicios
+from rescate.servicios import ErrorServicio, Servicios
 
 ETIQUETA_ESTADO = {
     EstadoDonativo.PUBLICADO: ("Publicado", "gray"),
@@ -90,3 +90,30 @@ def historial_estados(servicios: Servicios, actor: Actor, donativo_id: str) -> N
     for h in servicios.reportes.historial(actor, donativo_id):
         anterior = h["anterior"] or "—"
         st.caption(f"{h['fecha']:%d/%m %H:%M} · {anterior} → {h['nuevo']} ({h['evento']}) {h['motivo'] or ''}")
+
+
+def panel_avisos(servicios: Servicios, actor: Actor | None) -> None:
+    """Avisos del participante en la barra lateral (CAR-06): no leídos arriba."""
+    if actor is None:
+        return
+    try:
+        avisos = servicios.notificaciones.avisos(actor)
+    except ErrorServicio:
+        return
+    avisos.sort(key=lambda a: (a.leido, -a.fecha.timestamp()))
+    pendientes = sum(not a.leido for a in avisos)
+    with st.expander(f"🔔 Avisos ({pendientes})", expanded=pendientes > 0):
+        if not avisos:
+            st.caption("Sin avisos por ahora.")
+        for aviso in avisos:
+            marca = "" if aviso.leido else "🔵 "
+            st.markdown(f"{marca}**{aviso.titulo}** · {aviso.fecha:%d/%m %H:%M}")
+            st.caption(aviso.mensaje)
+            if not aviso.leido and st.button(
+                "Marcar como leído", key=f"sesion_leido_{aviso.id}"
+            ):
+                try:
+                    servicios.notificaciones.marcar_leido(actor, aviso.id)
+                except ErrorServicio as exc:
+                    st.error(str(exc))
+                st.rerun()
