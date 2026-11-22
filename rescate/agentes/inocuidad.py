@@ -40,6 +40,7 @@ from rescate.dominio.enums import (
     PERECEDEROS,
     Conservacion,
     Dictamen,
+    TipoAlimento,
     TipoEntradaBitacora,
 )
 from rescate.dominio.modelos import DictamenInocuidad, Donativo, ahora
@@ -158,6 +159,39 @@ def _sin_repetir(*listas: list[str]) -> list[str]:
     return list(dict.fromkeys(x for lista in listas for x in lista))
 
 
+#: Alimentos donde la hora y la conservación no cambian el dictamen (CI-03 es solo para perecederos).
+BAJO_RIESGO = {TipoAlimento.PANADERIA, TipoAlimento.ABARROTE, TipoAlimento.FRUTA_VERDURA}
+#: Criterios que sí aplican al bajo riesgo: deterioro (CI-01) y empaque dañado (CI-07).
+CRITERIOS_BAJO_RIESGO = ("Criterio interno CI-01", "Criterio interno CI-07")
+_TEMAS_BAJO_RIESGO = re.compile(
+    r"deterior|descompos|moho|plaga|insect|roedor|contamina|empaque|envase|abollad|caducidad|adulter",
+    re.IGNORECASE,
+)
+CONDICION_REVISAR = "Revisar el estado del alimento al recogerlo."
+
+
+def solo_bajo_riesgo(donativo: Donativo) -> bool:
+    return bool(donativo.alimentos) and all(a.tipo in BAJO_RIESGO for a in donativo.alimentos)
+
+
+def endurecimiento_justificado(
+    evaluacion: EvaluacionLLM, aceptadas: list[str], fragmentos: list[Fragmento]
+) -> bool:
+    """¿El LLM fundamenta un no apto para alimentos de bajo riesgo? Vale si cita CI-01 o CI-07
+    (en las citas o el texto) o un fragmento recuperado que hable de deterioro, plagas o empaque."""
+    citados = {clave_cita(c) for c in evaluacion.citas}
+    texto = f"{evaluacion.razonamiento} {evaluacion.motivo}"
+    if any(c in citados for c in CRITERIOS_BAJO_RIESGO) or _CRITERIO_BAJO_RIESGO.search(texto):
+        return True
+    texto_por_cita = {clave_cita(f.seccion): f"{f.seccion} {f.texto}" for f in fragmentos if f.seccion}
+    return any(
+        c.startswith("NOM-251") and _TEMAS_BAJO_RIESGO.search(texto_por_cita.get(c, "")) for c in aceptadas
+    )
+
+
+_CRITERIO_BAJO_RIESGO = re.compile(r"\bCI-0?[17]\b", re.IGNORECASE)
+
+
 class AgenteInocuidad(Agente[Donativo, DictamenInocuidad]):
     nombre = "Inocuidad"
 
@@ -254,12 +288,17 @@ class AgenteInocuidad(Agente[Donativo, DictamenInocuidad]):
         )
 
         # 4. Combinación en código
-        return self._resultado(self._combinar(dictamen_reglas, evaluacion, fragmentos, did), did)
+        return self._resultado(self._combinar(dictamen_reglas, evaluacion, fragmentos, did, entrada), did)
 
     # ------------------------------------------------------------------ pasos
 
     def _combinar(
-        self, reglas: DictamenInocuidad, evaluacion: EvaluacionLLM, fragmentos: list[Fragmento], did: str
+        self,
+        reglas: DictamenInocuidad,
+        evaluacion: EvaluacionLLM,
+        fragmentos: list[Fragmento],
+        did: str,
+        donativo: Donativo | None = None,
     ) -> DictamenInocuidad:
         dictamen = Dictamen.mas_estricto(reglas.dictamen, evaluacion.dictamen)
         relajaba = evaluacion.dictamen.severidad < reglas.dictamen.severidad
@@ -267,11 +306,35 @@ class AgenteInocuidad(Agente[Donativo, DictamenInocuidad]):
             self._anotar(
                 TipoEntradaBitacora.OBSERVACION,
                 f"El LLM propuso «{evaluacion.dictamen.value}», pero no puede relajar el dictamen de las reglas; "
-                f"queda «{reglas.dictamen.value}».",
+                f"queda «{reglas.dictamen.value}». Lo marco para revisión del coordinador.",
                 did,
                 paso=7,
             )
         aceptadas, descartadas = filtrar_citas(evaluacion.citas, fragmentos)
+        if (
+            dictamen == Dictamen.NO_APTO
+            and donativo is not None
+            and solo_bajo_riesgo(donativo)
+            and not endurecimiento_justificado(evaluacion, aceptadas, fragmentos)
+        ):
+            self._anotar(
+                TipoEntradaBitacora.PENSAMIENTO,
+                "El LLM quiere no apto, pero todos los alimentos son de bajo riesgo (pan, fruta, verdura o "
+                "abarrote) y no cita deterioro (CI-01), empaque dañado (CI-07) ni un numeral que lo justifique. "
+                "La conservación y la hora solo importan para perecederos: queda apto con condiciones y lo "
+                "marco para revisión del coordinador.",
+                did,
+                paso=7,
+            )
+            return DictamenInocuidad(
+                dictamen=Dictamen.APTO_CON_CONDICIONES,
+                motivo=f"{reglas.motivo} Conviene revisar su estado al recogerlo.".strip(),
+                condiciones=_sin_repetir(reglas.condiciones, [CONDICION_REVISAR]),
+                vida_util_horas=reglas.vida_util_horas,
+                requiere_refrigeracion=reglas.requiere_refrigeracion,
+                reglas_citadas=_sin_repetir(reglas.reglas_citadas, aceptadas),
+                requiere_revision=True,
+            )
         if descartadas:
             self._anotar(
                 TipoEntradaBitacora.OBSERVACION,
@@ -299,6 +362,7 @@ class AgenteInocuidad(Agente[Donativo, DictamenInocuidad]):
             vida_util_horas=reglas.vida_util_horas,
             requiere_refrigeracion=reglas.requiere_refrigeracion,
             reglas_citadas=_sin_repetir(reglas.reglas_citadas, aceptadas),
+            requiere_revision=relajaba,
         )
 
     def _resultado(self, dictamen: DictamenInocuidad, did: str, nota: str = "") -> DictamenInocuidad:
