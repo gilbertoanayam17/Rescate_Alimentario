@@ -5,9 +5,7 @@ publicación y de una recolección, ciclo de vida, eventos y mediador, patrones 
 cómo extenderlos, decisiones de seguridad y las fuentes de los factores de impacto. Los
 diagramas UML 2.5 están en [uml/](uml/README.md).
 
-<!-- PENDIENTE: imagen img/arquitectura_final.png, se genera con herramientas_docs (Gilberto). -->
-> **Imagen de arquitectura final: pendiente** (`img/arquitectura_final.png`). Mientras tanto, ver
-> el [diagrama de componentes](uml/componentes.png).
+![Arquitectura final: componentes del sistema](img/arquitectura_final.png)
 
 ## Capas
 
