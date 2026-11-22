@@ -426,6 +426,10 @@ def test_app_con_los_cuatro_roles(tmp_path, monkeypatch):
     monkeypatch.setenv("RUTA_DB", str(tmp_path / "app.duckdb"))
     monkeypatch.setenv("PIN_DEMO", "1234")
     monkeypatch.setenv("PIN_COORDINADOR", "0000")
+    monkeypatch.setattr("sys.argv", ["cargar_semilla.py"])
+    from scripts import cargar_semilla
+
+    cargar_semilla.main()  # el PIN de la demo solo lo asigna este script
     st.cache_resource.clear()
     app = AppTest.from_file(
         str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=30

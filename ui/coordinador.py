@@ -211,6 +211,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                     st.rerun()
                 except ErrorServicio as exc:
                     st.error(str(exc))
+            asignar_pin(servicios, actor, personas)
     with tabs[5]:
         pronosticos_del_dia(servicios, actor)
     with tabs[6]:
@@ -417,3 +418,27 @@ def pestana_impacto(servicios: Servicios, actor: Actor) -> None:
     )
     with st.expander("Ver los datos en tabla"):
         st.dataframe(serie)
+
+
+def asignar_pin(servicios: Servicios, actor: Actor, personas: list) -> None:
+    """Fija o cambia el PIN de un participante existente (sin PIN no puede entrar)."""
+    st.subheader("PIN de acceso")
+    with st.form("coordinador_pin"):
+        elegido = st.selectbox(
+            "Participante",
+            personas,
+            format_func=lambda p: f"{p.nombre} ({p.id})"
+            + ("" if p.pin_hash else " · sin PIN"),
+            key="coordinador_pin_participante",
+        )
+        pin = st.text_input(
+            "PIN nuevo (4 a 8 dígitos)", type="password", max_chars=8,
+            key="coordinador_pin_nuevo",
+        )
+        if st.form_submit_button("Asignar PIN"):
+            try:
+                servicios.participantes.registrar(actor, elegido, pin=pin)
+                st.session_state.coordinador_aviso = f"PIN asignado a {elegido.nombre}."
+                st.rerun()
+            except ErrorServicio as exc:
+                st.error(str(exc))

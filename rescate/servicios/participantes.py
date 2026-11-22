@@ -28,6 +28,7 @@ VENTANA_INTENTOS = timedelta(minutes=5)
 BLOQUEO = timedelta(minutes=1)
 CLAVE_COORDINADOR = "__coordinador__"
 PIN_INCORRECTO = "PIN incorrecto."
+SIN_PIN = "Este participante no tiene PIN; pídelo al coordinador."
 
 
 def hashear_pin(pin: str, sal: bytes | None = None, iteraciones: int = ITERACIONES) -> str:
@@ -62,17 +63,11 @@ class ServicioParticipantes:
         participantes: RepositorioParticipantes,
         donativos: RepositorioDonativos,
         pin_coordinador: str = "0000",
-        pin_demo: str | None = None,
         reloj: Callable[[], datetime] = ahora,
     ) -> None:
         self._participantes = participantes
         self._donativos = donativos
         self._pin_coordinador = pin_coordinador  # de Configuracion (PIN_COORDINADOR en .env)
-        if pin_demo is None:
-            from rescate.config import cargar_configuracion
-
-            pin_demo = cargar_configuracion().pin_demo
-        self._pin_demo = pin_demo  # primer inicio de los participantes de la semilla sin PIN
         self._reloj = reloj
         self._fallos: dict[str, deque[datetime]] = defaultdict(deque)
         self._bloqueados: dict[str, datetime] = {}
@@ -130,7 +125,8 @@ class ServicioParticipantes:
         self._participantes.eliminar(participante_id)
 
     def asignar_pin_faltante(self, pin: str) -> int:
-        """Da `pin` a los participantes que no tienen (lo usa scripts/cargar_semilla.py)."""
+        """Da `pin` a los participantes que no tienen. Solo lo usa scripts/cargar_semilla.py con
+        PIN_DEMO: es la única forma de que un participante reciba el PIN de la demo."""
         pin = validar_formato_pin(pin)
         sin_pin = [p for p in self._participantes.listar() if not p.pin_hash]
         for p in sin_pin:
@@ -146,14 +142,9 @@ class ServicioParticipantes:
         if participante is None:
             self._fallo(participante_id)
             raise ErrorAutorizacion("No existe ese participante.")
-        pin = (pin or "").strip()
-        if participante.pin_hash:
-            valido = verificar_pin(pin, participante.pin_hash)
-        else:  # participante de la semilla que nunca entró: su PIN es el de la demo
-            valido = bool(pin) and hmac.compare_digest(pin, self._pin_demo)
-            if valido:
-                self._participantes.guardar(participante.model_copy(update={"pin_hash": hashear_pin(pin)}))
-        if not valido:
+        if not participante.pin_hash:  # nunca se entra sin PIN, ni con el de la demo
+            raise ErrorAutorizacion(SIN_PIN)
+        if not verificar_pin((pin or "").strip(), participante.pin_hash):
             self._fallo(participante_id)
             raise ErrorAutorizacion(PIN_INCORRECTO)
         self._fallos.pop(participante_id, None)
