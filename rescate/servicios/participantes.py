@@ -10,9 +10,15 @@ from .errores import ErrorAutorizacion, ErrorServicio
 
 
 class ServicioParticipantes:
-    def __init__(self, participantes: RepositorioParticipantes, donativos: RepositorioDonativos) -> None:
+    def __init__(
+        self,
+        participantes: RepositorioParticipantes,
+        donativos: RepositorioDonativos,
+        pin_coordinador: str = "0000",
+    ) -> None:
         self._participantes = participantes
         self._donativos = donativos
+        self._pin_coordinador = pin_coordinador  # de Configuracion (PIN_COORDINADOR en .env)
 
     # ---------------------------------------------------------------- lectura
 
