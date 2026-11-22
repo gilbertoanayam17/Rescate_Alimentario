@@ -372,10 +372,11 @@ def test_coordinador_filtra_bitacora(aplicacion, donante, receptores):
     app = _pantalla(aplicacion, "coordinador")
     app.selectbox(key="coordinador_agente").select("Asignador").run()
     app.text_input(key="coordinador_donativo").set_value(d.id).run()
-    entradas = app.tabs[4].markdown
+    bitacora = next(t for t in app.tabs if t.label == "Bitácora")
+    entradas = bitacora.markdown
     assert entradas and all("**Asignador**" in e.value for e in entradas)
     app.text_input(key="coordinador_donativo").set_value("no-existe").run()
-    assert not app.tabs[4].markdown
+    assert not next(t for t in app.tabs if t.label == "Bitácora").markdown
 
 
 def test_app_con_los_cuatro_roles(tmp_path, monkeypatch):

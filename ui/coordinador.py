@@ -13,8 +13,10 @@ from rescate.dominio.modelos import (
     Receptor,
     Recolector,
     Ubicacion,
+    ahora,
 )
 from rescate.servicios import ErrorServicio, Servicios
+from ui.componentes_prediccion import tarjeta_pronostico
 from ui.comun import (
     ETIQUETA_ESTADO,
     historial_estados,
@@ -37,7 +39,14 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
         and (not d.asignacion or not d.receptor_id or d.asignacion.requiere_coordinador)
     ]
     tabs = st.tabs(
-        ["Resumen", "Donativos", "Sin receptor", "Participantes", "Bitácora"]
+        [
+            "Resumen",
+            "Donativos",
+            "Sin receptor",
+            "Participantes",
+            "Pronósticos",
+            "Bitácora",
+        ]
     )
     with tabs[0]:
         cols = st.columns(4)
@@ -195,6 +204,8 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                 except ErrorServicio as exc:
                     st.error(str(exc))
     with tabs[4]:
+        pronosticos_del_dia(servicios, actor)
+    with tabs[5]:
         entradas = servicios.reportes.bitacora_reciente(actor, 200)
         agente = st.selectbox(
             "Agente",
@@ -211,4 +222,30 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                 if (agente == "Todos" or e.agente == agente)
                 and (not donativo or e.donativo_id == donativo.strip())
             ]
+        )
+
+
+def pronosticos_del_dia(servicios: Servicios, actor: Actor) -> None:
+    """Genera y muestra los pronósticos de hoy de todos los donantes (CAR-07)."""
+    hoy = ahora().date()
+    if st.button("Generar pronósticos de hoy", key="coordinador_generar_pronosticos"):
+        try:
+            st.session_state.coordinador_pronosticos = servicios.prediccion.generar(
+                actor, hoy
+            )
+        except ErrorServicio as exc:
+            st.error(str(exc))
+    pronosticos = st.session_state.get("coordinador_pronosticos")
+    if pronosticos is None:
+        st.info("Pulsa el botón para calcular los pronósticos del día.")
+        return
+    if not pronosticos:
+        st.info("Hoy no hay pronósticos: ningún comercio tiene un patrón para este día.")
+    for p in pronosticos:
+        donante = servicios.participantes.obtener(p.donante_id)
+        receptor = servicios.participantes.obtener(p.receptor_sugerido_id)
+        tarjeta_pronostico(
+            p,
+            nombre_donante=donante.nombre if donante else None,
+            nombre_receptor=receptor.nombre if receptor else None,
         )
