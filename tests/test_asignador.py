@@ -225,11 +225,18 @@ def test_pantallas_rechazar_aceptar_recoger_entregar_y_metricas(
 ):
     from rescate.dominio.enums import EstadoDonativo
 
-    donativo = _publicar(aplicacion, donante, "Me sobraron 15 bolillos y 5 kg de jitomate")
+    donativo = _publicar(
+        aplicacion, donante, "Me sobraron 15 bolillos y 5 kg de jitomate"
+    )
     primero = donativo.receptor_id
-    receptor = _pantalla(aplicacion, "receptor", aplicacion.repos.participantes.obtener(primero))
+    receptor = _pantalla(
+        aplicacion, "receptor", aplicacion.repos.participantes.obtener(primero)
+    )
     receptor.button(key=f"receptor_rechazar_{donativo.id}").click().run()
-    assert receptor.error and aplicacion.repos.donativos.obtener(donativo.id).receptor_id == primero
+    assert (
+        receptor.error
+        and aplicacion.repos.donativos.obtener(donativo.id).receptor_id == primero
+    )
     receptor.text_input(key=f"receptor_motivo_{donativo.id}").set_value(
         "Sin espacio"
     ).run()
@@ -239,7 +246,10 @@ def test_pantallas_rechazar_aceptar_recoger_entregar_y_metricas(
     assert donativo.receptor_id != primero
     assert primero in donativo.receptores_descartados
     assert any("Se reasignó" in s.value for s in receptor.success)
-    receptor = _pantalla(aplicacion, "receptor", aplicacion.repos.participantes.obtener(donativo.receptor_id)
+    receptor = _pantalla(
+        aplicacion,
+        "receptor",
+        aplicacion.repos.participantes.obtener(donativo.receptor_id),
     )
     receptor.button(key=f"receptor_aceptar_{donativo.id}").click().run()
     assert not receptor.exception
@@ -247,13 +257,21 @@ def test_pantallas_rechazar_aceptar_recoger_entregar_y_metricas(
     voluntario = _pantalla(aplicacion, "recolector", recolector)
     voluntario.button(key=f"recolector_recoger_{donativo.id}").click().run()
     assert not voluntario.exception
-    assert aplicacion.repos.donativos.obtener(donativo.id).estado == EstadoDonativo.EN_RECOLECCION
+    assert (
+        aplicacion.repos.donativos.obtener(donativo.id).estado
+        == EstadoDonativo.EN_RECOLECCION
+    )
     voluntario.button(key=f"recolector_entregar_{donativo.id}").click().run()
     assert not voluntario.exception
-    assert aplicacion.repos.donativos.obtener(donativo.id).estado == EstadoDonativo.ENTREGADO
+    assert (
+        aplicacion.repos.donativos.obtener(donativo.id).estado
+        == EstadoDonativo.ENTREGADO
+    )
     rechazado = _publicar(aplicacion, donante, "Me sobraron 2 kg de arroz con moho")
     assert rechazado.estado == EstadoDonativo.RECHAZADO and not rechazado.receptor_id
-    assert not any(e.agente == "Asignador" for e in aplicacion.bitacora.de_donativo(rechazado.id))
+    assert not any(
+        e.agente == "Asignador" for e in aplicacion.bitacora.de_donativo(rechazado.id)
+    )
     coordinador = _pantalla(aplicacion, "coordinador")
     assert (
         float(_campo(coordinador, "metric", "Kg entregados").value)
@@ -320,21 +338,29 @@ def test_coordinador_reintenta_despues_del_alta(aplicacion, donante):
     donativo = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
     app = _pantalla(aplicacion, "coordinador")
     assert _campo(app, "metric", "Sin receptor").value == "1"
-    aplicacion.servicios.participantes.registrar(Actor(rol=Rol.COORDINADOR), 
-        Receptor(nombre="Nuevo comedor", ubicacion=donante.ubicacion)
+    aplicacion.servicios.participantes.registrar(
+        Actor(rol=Rol.COORDINADOR),
+        Receptor(nombre="Nuevo comedor", ubicacion=donante.ubicacion),
     )
     app.button(key=f"coordinador_reintentar_{donativo.id}").click().run()
-    assert not app.exception and aplicacion.repos.donativos.obtener(donativo.id).receptor_id
+    assert (
+        not app.exception
+        and aplicacion.repos.donativos.obtener(donativo.id).receptor_id
+    )
     assert _campo(app, "metric", "Sin receptor").value == "0"
 
 
-def test_recolector_no_toma_donativo_vencido(aplicacion, donante, receptores, recolector):
+def test_recolector_no_toma_donativo_vencido(
+    aplicacion, donante, receptores, recolector
+):
     from datetime import timedelta
 
     from rescate.dominio.modelos import ahora
 
     d = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
-    aplicacion.servicios.distribucion.aceptar(Actor(rol=Rol.RECEPTOR, participante_id=d.receptor_id), d.id)
+    aplicacion.servicios.distribucion.aceptar(
+        Actor(rol=Rol.RECEPTOR, participante_id=d.receptor_id), d.id
+    )
     d = aplicacion.repos.donativos.obtener(d.id)
     d.recoger_antes_de = ahora() - timedelta(seconds=1)
     aplicacion.repos.donativos.guardar(d)
@@ -348,7 +374,9 @@ def test_recolector_no_disponible_no_toma_donativo(
     aplicacion, donante, receptores, recolector
 ):
     d = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
-    aplicacion.servicios.distribucion.aceptar(Actor(rol=Rol.RECEPTOR, participante_id=d.receptor_id), d.id)
+    aplicacion.servicios.distribucion.aceptar(
+        Actor(rol=Rol.RECEPTOR, participante_id=d.receptor_id), d.id
+    )
     recolector.disponible = False
     aplicacion.servicios.participantes.registrar(Actor(rol=Rol.COORDINADOR), recolector)
     app = _pantalla(aplicacion, "recolector", recolector)
@@ -360,7 +388,9 @@ def test_coordinador_conserva_participantes_del_historial(
 ):
     d = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
     primero = d.receptor_id
-    aplicacion.servicios.distribucion.rechazar(Actor(rol=Rol.RECEPTOR, participante_id=primero), d.id, "Sin espacio")
+    aplicacion.servicios.distribucion.rechazar(
+        Actor(rol=Rol.RECEPTOR, participante_id=primero), d.id, "Sin espacio"
+    )
     app = _pantalla(aplicacion, "coordinador")
     app.selectbox(key="coordinador_eliminar_id").select(
         aplicacion.repos.participantes.obtener(primero)
@@ -403,3 +433,171 @@ def test_app_con_los_cuatro_roles(tmp_path, monkeypatch):
         app.sidebar.radio[0].set_value(rol).run()
         assert not app.exception
         assert app.header[0].value == encabezado
+
+
+# ------------------------------------------------------------ ciclo ReAct (A6)
+
+
+def paso(accion, receptor_id=None, pensamiento="Reviso", justificacion=None):
+    return {
+        "pensamiento": pensamiento,
+        "accion": accion,
+        "receptor_id": receptor_id,
+        "justificacion": justificacion,
+    }
+
+
+def entradas_de(aplicacion, solicitud, tipo=None):
+    return [
+        e.contenido
+        for e in aplicacion.bitacora.de_donativo(solicitud.donativo.id)
+        if tipo is None or e.tipo == tipo
+    ]
+
+
+def esquemas_llamados(llm_falso):
+    return [nombre for nombre, _ in llm_falso.llamadas]
+
+
+def test_react_ciclo_valido(caso, llm_falso, aplicacion):
+    agente, solicitud = caso
+    llm_falso.programar(
+        "PasoReAct",
+        paso("listar_compatibles"),
+        paso("distancia", "rec-cerca"),
+        paso("capacidad", "rec-cerca"),
+        paso("horario", "rec-cerca"),
+        paso("equidad", "rec-cerca"),
+        paso("finalizar", "rec-cerca", justificacion="Es el más cercano y le cabe."),
+    )
+    salida = agente.ejecutar(solicitud)
+    assert salida.receptor_id == "rec-cerca"
+    assert salida.justificacion.startswith(
+        "Es el más cercano y le cabe. Datos calculados:"
+    )
+    assert esquemas_llamados(llm_falso) == ["PasoReAct"] * 6  # no hace falta el nivel 1
+    observaciones = " ".join(
+        entradas_de(aplicacion, solicitud, TipoEntradaBitacora.OBSERVACION)
+    )
+    assert (
+        "Compatibles: Comedor Cerca (rec-cerca); Albergue Lejos (rec-lejos)"
+        in observaciones
+    )
+    assert "km en línea recta" in observaciones and "puede recibir" in observaciones
+    assert (
+        "últimos 7 días" in observaciones and "pasa las validaciones" in observaciones
+    )
+    acciones = entradas_de(aplicacion, solicitud, TipoEntradaBitacora.ACCION)
+    assert "ReAct 2: distancia(rec-cerca)" in acciones
+    # el historial de pasos viaja delimitado en el prompt del siguiente paso
+    ultimo = llm_falso.llamadas[-1][1]
+    assert (
+        "<datos_asignacion>" in ultimo
+        and "pasos_anteriores" in ultimo
+        and "km en línea recta" in ultimo
+    )
+
+
+def test_react_puede_elegir_otro_con_ventaja(caso, llm_falso):
+    agente, solicitud = caso
+    solicitud.receptores[0] = solicitud.receptores[0].model_copy(
+        update={"capacidad_kg_dia": 1}
+    )
+    llm_falso.programar(
+        "PasoReAct",
+        paso("puntuar"),
+        paso("finalizar", "rec-lejos", justificacion="Le cabe todo."),
+    )
+    assert agente.ejecutar(solicitud).receptor_id == "rec-lejos"
+
+
+def test_react_accion_invalida_usa_el_nivel_1(caso, llm_falso, aplicacion):
+    agente, solicitud = caso
+    llm_falso.programar("PasoReAct", paso("distancia", "inventado"))
+    assert agente.ejecutar(solicitud).receptor_id == "rec-cerca"
+    errores = entradas_de(aplicacion, solicitud, TipoEntradaBitacora.ERROR)
+    assert any("no es compatible" in e for e in errores)
+    assert esquemas_llamados(llm_falso) == ["PasoReAct", "DecisionAsignacion"]
+
+
+def test_react_respuesta_fuera_del_esquema_usa_el_nivel_1(caso, llm_falso):
+    agente, solicitud = caso
+    llm_falso.programar("PasoReAct", paso("borrar_base"))
+    assert agente.ejecutar(solicitud).receptor_id == "rec-cerca"
+
+
+def test_react_agota_los_pasos(caso, llm_falso, aplicacion):
+    agente, solicitud = caso
+    llm_falso.programar("PasoReAct", *[paso("puntuar")] * 6)
+    llm_falso.programar(
+        "DecisionAsignacion",
+        {
+            "razonamiento": "El primero",
+            "receptor_id": "rec-cerca",
+            "justificacion": "Mayor puntaje",
+        },
+    )
+    assert agente.ejecutar(solicitud).receptor_id == "rec-cerca"
+    assert esquemas_llamados(llm_falso) == ["PasoReAct"] * 6 + ["DecisionAsignacion"]
+    assert any(
+        "Se agotaron los 6 pasos" in e
+        for e in entradas_de(aplicacion, solicitud, TipoEntradaBitacora.ERROR)
+    )
+
+
+def test_react_finalizar_con_incompatible(caso, llm_falso, aplicacion):
+    agente, solicitud = caso
+    solicitud.donativo.alimentos.append(
+        Alimento(nombre="leche", cantidad=1, kg_estimados=1, tipo="lacteo")
+    )
+    llm_falso.programar(
+        "PasoReAct", paso("finalizar", "rec-cerca", justificacion="El más cercano")
+    )
+    # rec-cerca no acepta lácteos: con un solo compatible no hay ReAct ni LLM
+    assert agente.ejecutar(solicitud).receptor_id == "rec-lejos"
+    solicitud.receptores.append(
+        solicitud.receptores[1].model_copy(update={"id": "rec-lejos-2"})
+    )
+    salida = agente.ejecutar(solicitud)
+    assert salida.receptor_id in {"rec-lejos", "rec-lejos-2"}
+    assert any(
+        "no es compatible" in e
+        for e in entradas_de(aplicacion, solicitud, TipoEntradaBitacora.ERROR)
+    )
+
+
+def test_react_finalizar_sin_ventaja(caso, llm_falso, aplicacion):
+    agente, solicitud = caso
+    llm_falso.programar(
+        "PasoReAct", paso("finalizar", "rec-lejos", justificacion="Me gusta más")
+    )
+    assert agente.ejecutar(solicitud).receptor_id == "rec-cerca"
+    assert any(
+        "no supera" in e
+        for e in entradas_de(aplicacion, solicitud, TipoEntradaBitacora.ERROR)
+    )
+
+
+def test_react_finalizar_fuera_del_top_tres(caso, llm_falso, aplicacion):
+    agente, solicitud = caso
+    solicitud.receptores.extend(
+        solicitud.receptores[0].model_copy(update={"id": f"rec-extra-{i}"})
+        for i in range(3)
+    )
+    llm_falso.programar(
+        "PasoReAct", paso("finalizar", "rec-lejos", justificacion="Lejano")
+    )
+    salida = agente.ejecutar(solicitud)
+    assert salida.receptor_id != "rec-lejos"
+    assert any(
+        "no está entre los 3 mejores" in e
+        for e in entradas_de(aplicacion, solicitud, TipoEntradaBitacora.ERROR)
+    )
+
+
+def test_react_justificacion_vacia_usa_una_plantilla(caso, llm_falso):
+    agente, solicitud = caso
+    llm_falso.programar("PasoReAct", paso("finalizar", "rec-cerca", justificacion=" "))
+    assert agente.ejecutar(solicitud).justificacion.startswith(
+        "Elegí Comedor Cerca tras revisar"
+    )
