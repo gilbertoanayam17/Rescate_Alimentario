@@ -420,3 +420,103 @@ def test_un_apto_no_lleva_condiciones_del_llm(agente_rag, llm_falso):
     llm_falso.programar("EvaluacionLLM", evaluacion("apto", condiciones=["Lavar los jitomates"]))
     d = agente_rag.ejecutar(donativo_de(_caso("Me sobraron 15 bolillos y 5 kg de jitomate")))
     assert d.dictamen == Dictamen.APTO and d.condiciones == []
+
+
+# ------------------------------------- bajo riesgo y dictámenes dudosos (G2)
+
+CONCHAS = {
+    "texto": "una docena de conchas",
+    "alimentos": [
+        {"nombre": "conchas", "cantidad": 12, "unidad": "pieza", "tipo": "panaderia", "conservacion": "desconocida"}
+    ],
+    "hora_preparacion_horas_antes": None,
+}
+NO_APTO_POR_CONSERVACION = evaluacion(
+    "no_apto", motivo="No se sabe cómo se conservaron las conchas.", citas=["Criterio interno CI-04: cadena de frío"]
+)
+
+
+def test_pan_con_conservacion_desconocida_no_se_endurece_sin_fundamento(agente_rag, llm_falso, bitacora):
+    llm_falso.programar("EvaluacionLLM", NO_APTO_POR_CONSERVACION)
+    donativo = donativo_de(CONCHAS)
+    d = agente_rag.ejecutar(donativo)
+    assert d.dictamen == Dictamen.APTO_CON_CONDICIONES
+    assert "Revisar el estado del alimento al recogerlo." in d.condiciones
+    assert d.requiere_revision
+    assert any("bajo riesgo" in e.contenido for e in bitacora.de_donativo(donativo.id))
+
+
+def test_pan_con_moho_sigue_no_apto(agente_rag, llm_falso):
+    d = agente_rag.ejecutar(donativo_de(_caso("10 conchas, unas ya tienen moho")))
+    assert d.dictamen == Dictamen.NO_APTO  # CI-01 de las reglas; el LLM ni se consulta
+    assert not d.requiere_revision
+    assert llm_falso.llamadas == []
+
+
+def test_bajo_riesgo_se_endurece_si_cita_deterioro_o_empaque(agente_rag, llm_falso):
+    llm_falso.programar(
+        "EvaluacionLLM",
+        evaluacion("no_apto", motivo="El texto sugiere plagas en la bodega (CI-01).", citas=[]),
+    )
+    d = agente_rag.ejecutar(donativo_de(CONCHAS))
+    assert d.dictamen == Dictamen.NO_APTO and not d.requiere_revision
+
+
+def test_bajo_riesgo_se_endurece_con_un_numeral_recuperado_que_hable_de_plagas(llm_falso, bitacora):
+    from rescate.agentes.inocuidad import AgenteInocuidad
+
+    plagas = Fragmento(
+        texto="Los alimentos deben protegerse de la fauna nociva y las plagas.",
+        fuente="nom251_extracto.md",
+        seccion="NOM-251-SSA1-2009, numeral 5.11.1: control de plagas",
+    )
+    agente = AgenteInocuidad(llm_falso, bitacora, BaseFija([plagas]), reloj=lambda: AHORA)
+    llm_falso.programar(
+        "EvaluacionLLM",
+        evaluacion("no_apto", citas=["NOM-251-SSA1-2009, numeral 5.11.1: control de plagas"]),
+    )
+    d = agente.ejecutar(donativo_de(CONCHAS))
+    assert d.dictamen == Dictamen.NO_APTO and not d.requiere_revision
+
+
+def test_perecedero_si_se_puede_endurecer_sin_criterio_de_bajo_riesgo(agente_rag, llm_falso):
+    llm_falso.programar("EvaluacionLLM", evaluacion("no_apto", motivo="El mole lleva mucho tiempo."))
+    d = agente_rag.ejecutar(donativo_de(_caso(MOLE_FRIO)))
+    assert d.dictamen == Dictamen.NO_APTO and not d.requiere_revision
+
+
+def test_intentar_relajar_marca_revision(agente_rag, llm_falso):
+    llm_falso.programar("EvaluacionLLM", evaluacion("apto", motivo="Es apto."))
+    d = agente_rag.ejecutar(donativo_de(_caso(MOLE_FRIO)))
+    assert d.dictamen == Dictamen.APTO_CON_CONDICIONES and d.requiere_revision
+
+
+def test_mantener_el_dictamen_no_marca_revision(agente_rag, llm_falso):
+    llm_falso.programar("EvaluacionLLM", evaluacion("apto_con_condiciones"))
+    d = agente_rag.ejecutar(donativo_de(_caso(MOLE_FRIO)))
+    assert not d.requiere_revision
+
+
+def test_dictamen_dudoso_abre_caso_para_el_coordinador(servicios, llm_falso, actor_de, coordinador, donante, receptores):
+    from rescate.dominio.enums import TipoCaso
+
+    llm_falso.programar(
+        "InterpretacionLLM",
+        {
+            "razonamiento": "Dona 12 conchas.",
+            "alimentos": [
+                {"nombre": "conchas", "cantidad": 12, "unidad": "pieza", "tipo": "panaderia",
+                 "conservacion": "desconocida", "observaciones": ""}
+            ],
+            "hora_preparacion": None,
+            "recoger_antes_de": None,
+            "datos_faltantes": [],
+            "pregunta": None,
+        },
+    )
+    llm_falso.programar("EvaluacionLLM", NO_APTO_POR_CONSERVACION)
+    r = servicios.publicacion.publicar(actor_de(donante), "una docena de conchas")
+    assert r.donativo.dictamen.dictamen == Dictamen.APTO_CON_CONDICIONES
+    assert r.donativo.receptor_id is not None  # se asigna normalmente
+    casos = servicios.casos.abiertos(coordinador)
+    assert [(c.tipo, c.donativo_id) for c in casos] == [(TipoCaso.INOCUIDAD_DUDOSA, r.donativo.id)]
