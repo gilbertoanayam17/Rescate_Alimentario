@@ -301,11 +301,13 @@ def test_coordinador_alta_y_eliminacion_confirmada(aplicacion, rol):
     app.selectbox(key="coordinador_rol").select(Rol(rol)).run()
     _campo(app, "text_input", "Nombre").set_value(f"Prueba {rol}")
     _campo(app, "text_input", "Dirección").set_value("Centro de Guadalajara")
+    _campo(app, "text_input", "PIN de acceso (4 a 8 dígitos)").set_value("4321")
     _campo(app, "button", "Registrar participante").click().run()
     assert not app.exception
     assert len(aplicacion.servicios.participantes.listar()) == 1
     persona = aplicacion.servicios.participantes.listar()[0]
     assert persona.rol == Rol(rol) and persona.nombre == f"Prueba {rol}"
+    assert persona.pin_hash.startswith("pbkdf2$") and "4321" not in persona.pin_hash
     assert app.button(key="coordinador_eliminar").disabled
     app.checkbox(key="coordinador_confirmar").check().run()
     app.button(key="coordinador_eliminar").click().run()
@@ -412,27 +414,40 @@ def test_coordinador_filtra_bitacora(aplicacion, donante, receptores):
 
 
 def test_app_con_los_cuatro_roles(tmp_path, monkeypatch):
+    """La app real: sin PIN no hay página; con PIN se abre la del rol del participante."""
     from pathlib import Path
 
+    import streamlit as st
     from streamlit.testing.v1 import AppTest
 
     from rescate.dominio.enums import Rol
 
     monkeypatch.setenv("USAR_LLM_FALSO", "1")
     monkeypatch.setenv("RUTA_DB", str(tmp_path / "app.duckdb"))
+    monkeypatch.setenv("PIN_DEMO", "1234")
+    monkeypatch.setenv("PIN_COORDINADOR", "0000")
+    st.cache_resource.clear()
     app = AppTest.from_file(
         str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=30
     ).run()
     assert not app.exception
-    assert len(app.sidebar.selectbox[0].options) == 7
-    for rol, encabezado in [
-        (Rol.RECEPTOR, "Donativos para mi organización"),
-        (Rol.RECOLECTOR, "Recolecciones"),
-        (Rol.COORDINADOR, "Coordinación"),
+    assert not app.header  # sin sesión no hay página
+    assert len(app.selectbox(key="sesion_participante").options) == 7
+    for rol, pin, encabezado in [
+        (Rol.DONANTE, "1234", "Publica lo que te sobró"),
+        (Rol.RECEPTOR, "1234", "Donativos para mi organización"),
+        (Rol.RECOLECTOR, "1234", "Recolecciones"),
+        (Rol.COORDINADOR, "0000", "Coordinación"),
     ]:
-        app.sidebar.radio[0].set_value(rol).run()
+        app.radio(key="sesion_rol").set_value(rol).run()
+        app.text_input(key="sesion_pin").input(pin)
+        next(b for b in app.button if b.label == "Entrar").click().run()
         assert not app.exception
         assert app.header[0].value == encabezado
+        assert not app.sidebar.radio  # ya no existe el selector de rol
+        app.sidebar.button(key="sesion_salir").click().run()
+        assert not app.header
+    st.cache_resource.clear()
 
 
 # ------------------------------------------------------------ ciclo ReAct (A6)

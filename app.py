@@ -1,18 +1,16 @@
 """Punto de entrada de la interfaz: `streamlit run app.py`.
 
-En el MVP no hay login: en la barra lateral se elige el rol y el participante
-(los cuatro roles se simulan desde la misma app).
-
-Archivo COMPARTIDO (fase 0). Cada página vive en ui/<rol>.py y expone
-`mostrar(servicios, actor)`.
+Sin sesión, la pantalla de entrada pide el participante y su PIN (o el PIN del coordinador). El
+rol no se elige: sale del participante con el que se entra y los servicios lo validan contra
+la base. Cada página vive en ui/<rol>.py y expone `mostrar(servicios, actor)`.
 """
 import streamlit as st
 
 from rescate.contenedor import construir_servicios
 from rescate.dominio.enums import Rol
-from rescate.dominio.modelos import Actor
 from ui import coordinador, donante, receptor, recolector
 from ui.comun import panel_avisos
+from ui.sesion import actor_de_sesion, barra_sesion, pantalla_entrada
 
 st.set_page_config(page_title="Rescate Alimentario", page_icon="🥖", layout="wide")
 
@@ -30,30 +28,19 @@ PAGINAS = {
     Rol.RECOLECTOR: recolector,
     Rol.COORDINADOR: coordinador,
 }
-ETIQUETAS = {
-    Rol.DONANTE: "Donante (comercio)",
-    Rol.RECEPTOR: "Receptor (comedor)",
-    Rol.RECOLECTOR: "Recolector (voluntario)",
-    Rol.COORDINADOR: "Coordinador",
-}
+
+actor = actor_de_sesion()
+if actor is None:
+    pantalla_entrada(servicios)
+    st.caption(servicios.estado_llm())
+    st.stop()
 
 with st.sidebar:
     st.title("Rescate Alimentario")
     st.caption("Del sobrante de la fonda al comedor comunitario")
-    rol = st.radio("Entrar como", list(PAGINAS), format_func=ETIQUETAS.get, key="rol")
-    actor = Actor(rol=Rol.COORDINADOR) if rol == Rol.COORDINADOR else None
-    if rol != Rol.COORDINADOR:
-        opciones = servicios.participantes.listar(rol)
-        if not opciones:
-            st.warning("No hay participantes con este rol. Da de alta uno como coordinador.")
-        else:
-            nombres = {p.id: p.nombre for p in opciones}
-            elegido = st.selectbox(
-                "¿Quién eres?", list(nombres), format_func=nombres.get, key=f"participante_{rol.value}"
-            )
-            actor = Actor(rol=rol, participante_id=elegido)
+    barra_sesion(servicios, actor)
     st.divider()
     panel_avisos(servicios, actor)
     st.caption(servicios.estado_llm())
 
-PAGINAS[rol].mostrar(servicios, actor)
+PAGINAS[actor.rol].mostrar(servicios, actor)

@@ -153,8 +153,13 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                     "Transporte", ["auto", "moto", "bicicleta", "a pie"]
                 )
                 campos["disponible"] = st.checkbox("Disponible", value=True)
+            pin = st.text_input(
+                "PIN de acceso (4 a 8 dígitos)", type="password", max_chars=8
+            )
             if st.form_submit_button("Registrar participante"):
                 try:
+                    if not pin.strip():
+                        raise ErrorServicio("Escribe el PIN con el que entrará.")
                     clase = {
                         Rol.DONANTE: Donante,
                         Rol.RECEPTOR: Receptor,
@@ -166,7 +171,8 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                             nombre=nombre.strip(),
                             ubicacion=Ubicacion(lat=lat, lon=lon, direccion=direccion),
                             **campos,
-                        )
+                        ),
+                        pin=pin,
                     )
                     st.session_state.coordinador_aviso = "Participante registrado."
                     st.rerun()
