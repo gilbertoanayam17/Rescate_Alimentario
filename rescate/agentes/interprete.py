@@ -306,8 +306,8 @@ def clasificar(nombre: str) -> TipoAlimento:
 
 #: Palabras con las que el donante dice cómo guardó la comida, de la más estricta a la menos.
 PALABRAS_CONSERVACION: dict[Conservacion, tuple[str, ...]] = {
-    Conservacion.AMBIENTE: ("afuera", "ambiente", "mostrador"),
-    Conservacion.CALIENTE: ("caliente", "calientito"),
+    Conservacion.AMBIENTE: ("afuera", "ambiente", "mostrador", "en la mesa"),
+    Conservacion.CALIENTE: ("calient",),  # caliente, calientes, calientito, calientita
     Conservacion.REFRIGERADO: ("refri",),
     Conservacion.CONGELADO: ("congelad",),
 }
@@ -623,15 +623,16 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
     def _validar_conservacion(
         self, alimentos: list[Alimento], texto: str, did: str | None, alertas: list[str]
     ) -> list[Alimento]:
-        """Validación cruzada con `detectar_conservacion`: la conservación de cada perecedero debe
-        aparecer en el texto confiable (el texto sin los fragmentos que parecen órdenes al agente)."""
+        """Validación cruzada con `detectar_conservacion`: la conservación que da el LLM a cualquier
+        alimento debe aparecer en el texto confiable (sin las oraciones que parecen órdenes al agente).
+        Solo para un perecedero se completa una conservación que el LLM dejó como desconocida."""
         confiable = texto_confiable(texto)
         mencionadas = conservaciones_mencionadas(confiable)
         perecederos = [a for a in alimentos if a.tipo in PERECEDEROS]
         resultado = []
         for a in alimentos:
             nueva = a.conservacion
-            if a.tipo in PERECEDEROS and a.conservacion != Conservacion.DESCONOCIDA:
+            if a.conservacion != Conservacion.DESCONOCIDA:
                 if a.conservacion not in mencionadas:
                     nueva = detectar_conservacion(confiable)
                     alertas.append("conservacion_corregida")
@@ -648,9 +649,10 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
         return resultado
 
     def _interpretar_con_reglas(self, texto: str) -> ResultadoInterpretacion:
-        conservacion = detectar_conservacion(texto_confiable(texto))
+        confiable = texto_confiable(texto)  # una orden escondida no se convierte en alimento
+        conservacion = detectar_conservacion(confiable)
         alimentos: list[Alimento] = []
-        for fragmento in re.split(r",|;|\by\b|\be\b", texto):
+        for fragmento in re.split(r",|;|\by\b|\be\b", confiable):
             coincidencia = _PATRON.search(fragmento.strip())
             if not coincidencia:
                 continue
