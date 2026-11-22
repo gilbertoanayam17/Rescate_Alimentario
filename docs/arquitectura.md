@@ -118,3 +118,16 @@ Cada agente anota sus pasos con `self._anotar(...)` y la bitácora los guarda en
 | Error | ⚠️ | "El LLM eligió un receptor fuera de la lista; uso el mayor puntaje calculado" |
 
 La página del donante muestra la bitácora de cada donativo en "¿Cómo lo decidieron los agentes?" y el coordinador la consulta completa, con filtros por agente y por donativo.
+
+## Tablero de impacto y sus fuentes
+
+El tablero (CAR-08) lo calcula `rescate/herramientas/impacto.py`, una calculadora determinista separada del LLM. Cuenta solo los donativos **entregados**, por fecha de entrega. `ServicioReportes.tablero` agrega el resumen, la serie semanal, el top 10 de donantes y de receptores y el reparto por tipo de alimento. El coordinador ve todo; el donante y el receptor solo lo suyo (el servicio fuerza el filtro con su id).
+
+| Cifra | Factor | Fuente |
+| --- | --- | --- |
+| Raciones equivalentes | 0.42 kg por ración | WRAP (2020), [*Expressing redistributed food surplus as meal equivalents*](https://wrap.ngo/resources/guide/reporting-amounts-food-surplus-redistributed-weight-and-meal-equivalents-wrap): recomienda 420 g como comida "promedio" (antes usaba 500 g). |
+| CO2e evitado | 2.06 kg CO2e por kg (3.3 / 1.6) | FAO (2013), [*Food Wastage Footprint: Impacts on Natural Resources. Summary Report*](https://www.fao.org/4/i3347e/i3347e.pdf): 3.3 Gt CO2e (sin cambio de uso de suelo) por 1.6 Gt de alimento desperdiciado. |
+
+El factor de emisiones es un promedio mundial para todos los tipos de alimento; `co2e_evitado(kg, tipo)` ya recibe el tipo para usar factores por tipo en el futuro.
+
+Para la demostración, `python scripts/generar_historial.py` (con Streamlit detenido) crea un año de donativos entregados (ids `hist-…`) que termina hace 8 días, con patrones por día de la semana que el Agente Predictor detecta. `--borrar` los quita y `--caso-vencido` agrega un donativo asignado con el plazo vencido para la bandeja de casos.

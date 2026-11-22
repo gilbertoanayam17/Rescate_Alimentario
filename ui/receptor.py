@@ -9,7 +9,7 @@ from rescate.dominio.enums import TipoAlimento
 from rescate.dominio.modelos import Actor, Receptor, ahora
 from rescate.servicios import ErrorServicio, Servicios
 from ui.componentes_prediccion import tarjeta_pronostico
-from ui.comun import tarjeta_donativo
+from ui.comun import metricas_impacto, tarjeta_donativo
 
 ETIQUETAS = dict(
     zip(
@@ -116,6 +116,11 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                 )
     with tabs[2]:
         st.metric("Total de kg recibidos", sum(d.kg_totales for d in recibidos))
+        st.subheader("Mi impacto (últimos 12 meses)")
+        hoy = ahora().date()
+        metricas_impacto(
+            servicios.reportes.tablero(actor, hoy - timedelta(days=365), hoy)
+        )
         for d in recibidos:
             tarjeta_donativo(servicios, actor, d)
     with tabs[3]:

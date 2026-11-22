@@ -1,8 +1,9 @@
 """Administración de participantes, bandeja de casos (CAR-10), pronósticos y trazabilidad."""
 
 from collections import Counter
-from datetime import time
+from datetime import time, timedelta
 
+import pandas as pd
 import streamlit as st
 
 from rescate.dominio.enums import EstadoDonativo as E
@@ -21,6 +22,7 @@ from ui.componentes_prediccion import tarjeta_pronostico
 from ui.comun import (
     ETIQUETA_ESTADO,
     historial_estados,
+    metricas_impacto,
     tarjeta_donativo,
     vista_bitacora,
 )
@@ -49,6 +51,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
             "Resumen",
             "Donativos",
             "Casos",
+            "Impacto",
             "Participantes",
             "Pronósticos",
             "Bitácora",
@@ -90,6 +93,8 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
     with tabs[2]:
         bandeja_casos(servicios, actor)
     with tabs[3]:
+        pestana_impacto(servicios, actor)
+    with tabs[4]:
         for rol in (Rol.DONANTE, Rol.RECEPTOR, Rol.RECOLECTOR):
             st.subheader(rol.value.capitalize())
             personas = servicios.participantes.listar(rol)
@@ -200,9 +205,9 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                     st.rerun()
                 except ErrorServicio as exc:
                     st.error(str(exc))
-    with tabs[4]:
-        pronosticos_del_dia(servicios, actor)
     with tabs[5]:
+        pronosticos_del_dia(servicios, actor)
+    with tabs[6]:
         entradas = servicios.reportes.bitacora_reciente(actor, 200)
         agente = st.selectbox(
             "Agente",
@@ -329,3 +334,72 @@ def resolver_caso(servicios: Servicios, actor: Actor, caso_id: str) -> None:
             st.rerun()
         except ErrorServicio as exc:
             st.error(str(exc))
+
+
+def pestana_impacto(servicios: Servicios, actor: Actor) -> None:
+    """Tablero de impacto (CAR-08): periodo, filtros, cifras clave y gráficas."""
+    hoy = ahora().date()
+    filtros = st.columns(4)
+    desde = filtros[0].date_input(
+        "Desde", hoy - timedelta(days=365), key="coordinador_impacto_desde"
+    )
+    hasta = filtros[1].date_input("Hasta", hoy, key="coordinador_impacto_hasta")
+    donante = filtros[2].selectbox(
+        "Donante",
+        [None, *servicios.participantes.listar(Rol.DONANTE)],
+        format_func=lambda p: "Todos" if p is None else p.nombre,
+        key="coordinador_impacto_donante",
+    )
+    receptor = filtros[3].selectbox(
+        "Receptor",
+        [None, *servicios.participantes.listar(Rol.RECEPTOR)],
+        format_func=lambda p: "Todos" if p is None else p.nombre,
+        key="coordinador_impacto_receptor",
+    )
+    if desde > hasta:
+        st.error("La fecha inicial debe ser anterior a la final.")
+        return
+    tablero = servicios.reportes.tablero(
+        actor,
+        desde,
+        hasta,
+        donante_id=donante.id if donante else None,
+        receptor_id=receptor.id if receptor else None,
+    )
+    metricas_impacto(tablero)
+    if not tablero.resumen.donativos:
+        st.info("No hay entregas en este periodo.")
+        return
+    serie = pd.DataFrame(
+        [
+            {"Semana": p.semana, "kg": p.kg, "raciones": p.raciones, "CO2e (kg)": p.co2e_kg}
+            for p in tablero.serie_semanal
+        ]
+    ).set_index("Semana")
+    st.markdown("**Kg rescatados por semana**")
+    st.line_chart(serie[["kg"]], y_label="kg")
+    izquierda, derecha = st.columns(2)
+    for columna, titulo, top in (
+        (izquierda, "Top 10 donantes (kg)", tablero.top_donantes),
+        (derecha, "Top 10 receptores (kg)", tablero.top_receptores),
+    ):
+        columna.markdown(f"**{titulo}**")
+        columna.bar_chart(
+            pd.DataFrame([{"nombre": p.nombre, "kg": p.kg} for p in top]).set_index("nombre"),
+            horizontal=True,
+            sort="-kg",
+            x_label="kg",
+            y_label="",
+        )
+    st.markdown("**Kg por tipo de alimento**")
+    st.bar_chart(
+        pd.DataFrame(
+            [{"tipo": ETIQUETAS[TipoAlimento(t)], "kg": kg} for t, kg in tablero.kg_por_tipo.items()]
+        ).set_index("tipo"),
+        horizontal=True,
+        sort="-kg",
+        x_label="kg",
+        y_label="",
+    )
+    with st.expander("Ver los datos en tabla"):
+        st.dataframe(serie)
