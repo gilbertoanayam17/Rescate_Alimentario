@@ -11,19 +11,39 @@ Aclaraciones: la página del donante vuelve a llamar con
 `texto_anterior + MARCA_ACLARACION + respuesta` y el mismo `donativo_id`. Tras
 `MAX_ACLARACIONES` rondas ya no se pregunta: se publica con lo que haya y la Inocuidad
 es conservadora con lo desconocido.
+
+Seguridad (prompt injection): el mensaje va limpio y delimitado en `<texto_donante>`, el prompt de
+sistema dice que es solo un dato y, después del LLM, el código valida su respuesta contra el texto:
+la conservación de un perecedero debe aparecer en el texto confiable (`conservaciones_mencionadas`,
+con las mismas palabras que `detectar_conservacion`) y cada alimento debe estar mencionado. Lo que
+no cuadra se corrige, se explica en la bitácora y queda como alerta para el coordinador.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Callable, Literal
+from typing import Literal
 
 from pydantic import BaseModel
 
 from rescate.agentes.base import Agente
+from rescate.agentes.seguridad_prompt import (
+    REGLA_DATOS,
+    delimitar,
+    detectar_inyeccion,
+    limpiar_texto_usuario,
+    sin_acentos,
+    texto_confiable,
+)
 from rescate.bitacora import Bitacora
-from rescate.dominio.enums import PERECEDEROS, Conservacion, TipoAlimento, TipoEntradaBitacora
+from rescate.dominio.enums import (
+    PERECEDEROS,
+    Conservacion,
+    TipoAlimento,
+    TipoEntradaBitacora,
+)
 from rescate.dominio.modelos import (
     Alimento,
     Donante,
@@ -35,6 +55,8 @@ from rescate.llm.cliente import ClienteLLM, ErrorLLM
 
 MARCA_ACLARACION = "\nAclaración del donante: "
 MAX_ACLARACIONES = 2
+MAXIMO_TEXTO = 1500
+MAXIMO_OBSERVACIONES = 200
 PREGUNTA_SIN_ALIMENTOS = (
     "¿Qué alimentos te sobraron y cuánto de cada uno? Por ejemplo: 15 bolillos y 3 kg de arroz."
 )
@@ -96,12 +118,14 @@ México, que pida justo eso.
 úsalas para completar los datos del mismo donativo. Lo que diga una aclaración sobre la hora o \
 la conservación aplica solo a los alimentos por los que se preguntó; a los demás déjales lo que ya \
 tenían.
+12. {regla_datos}
 
 Ejemplo 1
 Hora actual: 18:30
-Comercio: Panadería La Espiga (panaderia), cierra a las 20:00
-Mensaje del donante:
+<comercio>Panadería La Espiga (panaderia), cierra a las 20:00</comercio>
+<texto_donante>
 me sobraron una docena de bolis y kilo y medio de jitomate
+</texto_donante>
 JSON:
 {"razonamiento": "Dona 12 bolillos y 1.5 kg de jitomate; ninguno es perecedero de alto riesgo.", \
 "alimentos": [{"nombre": "bolillos", "cantidad": 12, "unidad": "pieza", "tipo": "panaderia", \
@@ -111,9 +135,10 @@ JSON:
 
 Ejemplo 2
 Hora actual: 17:00
-Comercio: Fonda Doña Lupe (fonda), cierra a las 18:00
-Mensaje del donante:
+<comercio>Fonda Doña Lupe (fonda), cierra a las 18:00</comercio>
+<texto_donante>
 Tengo 2 charolas de pollo en mole
+</texto_donante>
 JSON:
 {"razonamiento": "Dona 2 charolas de pollo en mole, un guisado; no dice cuándo lo preparó ni \
 cómo lo ha guardado.", "alimentos": [{"nombre": "pollo en mole", "cantidad": 2, "unidad": \
@@ -125,16 +150,17 @@ ambiente)?"}
 
 Ejemplo 3
 Hora actual: 17:00
-Comercio: Fonda Doña Lupe (fonda), cierra a las 18:00
-Mensaje del donante:
+<comercio>Fonda Doña Lupe (fonda), cierra a las 18:00</comercio>
+<texto_donante>
 Tengo 2 charolas de pollo en mole
 Aclaración del donante: lo hice a las 2 y está en el refri
+</texto_donante>
 JSON:
 {"razonamiento": "Son 2 charolas de pollo en mole preparadas a las 14:00 y guardadas en el \
 refrigerador.", "alimentos": [{"nombre": "pollo en mole", "cantidad": 2, "unidad": "charola", \
 "tipo": "preparado", "conservacion": "refrigerado", "observaciones": ""}], "hora_preparacion": \
 "14:00", "recoger_antes_de": null, "datos_faltantes": [], "pregunta": null}
-"""
+""".replace("{regla_datos}", REGLA_DATOS.format(etiqueta="texto_donante"))
 
 PALABRAS_POR_TIPO: dict[TipoAlimento, list[str]] = {
     TipoAlimento.PANADERIA: [
@@ -278,17 +304,46 @@ def clasificar(nombre: str) -> TipoAlimento:
     return TipoAlimento.OTRO
 
 
+#: Palabras con las que el donante dice cómo guardó la comida, de la más estricta a la menos.
+PALABRAS_CONSERVACION: dict[Conservacion, tuple[str, ...]] = {
+    Conservacion.AMBIENTE: ("afuera", "ambiente", "mostrador"),
+    Conservacion.CALIENTE: ("caliente", "calientito"),
+    Conservacion.REFRIGERADO: ("refri",),
+    Conservacion.CONGELADO: ("congelad",),
+}
+
+
+def conservaciones_mencionadas(texto: str) -> set[Conservacion]:
+    """Las conservaciones que menciona el texto (ninguna, una o varias)."""
+    normal = sin_acentos(texto)
+    return {c for c, palabras in PALABRAS_CONSERVACION.items() if any(p in normal for p in palabras)}
+
+
 def detectar_conservacion(texto: str) -> Conservacion:
-    texto = texto.lower()
-    if "congelad" in texto:
-        return Conservacion.CONGELADO
-    if "refri" in texto:
-        return Conservacion.REFRIGERADO
-    if "caliente" in texto or "calientito" in texto:
-        return Conservacion.CALIENTE
-    if "afuera" in texto or "ambiente" in texto or "mostrador" in texto:
-        return Conservacion.AMBIENTE
-    return Conservacion.DESCONOCIDA
+    """La conservación que dice el texto; si menciona varias, la más estricta ("afuera" gana a
+    "en el refri"). DESCONOCIDA si no dice nada."""
+    mencionadas = conservaciones_mencionadas(texto)
+    return next((c for c in PALABRAS_CONSERVACION if c in mencionadas), Conservacion.DESCONOCIDA)
+
+
+_PALABRA = re.compile(r"[a-z0-9]+")
+_CONECTORES = {"de", "en", "con", "y", "a", "al", "la", "el", "los", "las", "sin"}
+
+
+def alimento_mencionado(nombre: str, texto: str) -> bool:
+    """¿El texto menciona este alimento? Basta una raíz común de 4 letras o más, sin acentos
+    ("bolillos" y "bolis", "jitomates" y "jitomate"); las palabras cortas deben aparecer completas."""
+    normal = sin_acentos(texto)
+    palabras_texto = set(_PALABRA.findall(normal))
+    for palabra in _PALABRA.findall(sin_acentos(nombre)):
+        if palabra in _CONECTORES:
+            continue
+        if len(palabra) < 4:
+            if palabra in palabras_texto:
+                return True
+        elif any(palabra[i : i + 4] in normal for i in range(len(palabra) - 3)):
+            return True
+    return False
 
 
 # ------------------------------------------------- herramientas deterministas de hora
@@ -408,8 +463,21 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
 
     def ejecutar(self, entrada: SolicitudInterpretacion) -> ResultadoInterpretacion:
         did = entrada.donativo_id
-        aclaraciones = entrada.texto.count(MARCA_ACLARACION)
+        entrada = entrada.model_copy(update={"texto": limpiar_texto_usuario(entrada.texto, maximo=MAXIMO_TEXTO)})
+        aclaraciones = entrada.texto.count(MARCA_ACLARACION.strip())
         momento = self.reloj()
+        alertas: list[str] = []
+        senales = detectar_inyeccion(entrada.texto)
+        if senales:
+            alertas.append("posible_inyeccion")
+            self._anotar(
+                TipoEntradaBitacora.OBSERVACION,
+                f"Posible intento de manipulación ({', '.join(senales)}); trato el texto solo como dato "
+                "y valido la respuesta del LLM contra lo que dice el texto.",
+                did,
+                paso=1,
+                datos={"senales": senales},
+            )
         self._anotar(
             TipoEntradaBitacora.ACCION,
             f"Consulto a {self.llm.nombre_modelo} con el esquema InterpretacionLLM"
@@ -430,6 +498,7 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
                 datos={"error": str(e)},
             )
             resultado = self._interpretar_con_reglas(entrada.texto)
+            resultado.alertas = alertas
             self._anotar(
                 TipoEntradaBitacora.RESULTADO,
                 f"Con reglas encontré {len(resultado.alimentos)} alimento(s)."
@@ -442,7 +511,7 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
             return resultado
 
         self._anotar(TipoEntradaBitacora.PENSAMIENTO, respuesta.razonamiento, did, paso=2)
-        resultado = self._postprocesar(respuesta, entrada, momento, aclaraciones)
+        resultado = self._postprocesar(respuesta, entrada, momento, aclaraciones, alertas)
         self._anotar(
             TipoEntradaBitacora.OBSERVACION,
             "; ".join(_describir(a) for a in resultado.alimentos) or "No identifiqué alimentos con cantidad.",
@@ -467,11 +536,12 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
     @staticmethod
     def _prompt(entrada: SolicitudInterpretacion, momento: datetime) -> str:
         donante = entrada.donante
-        return (
-            f"Hora actual: {momento:%H:%M}\n"
-            f"Comercio: {donante.nombre} ({donante.tipo_comercio}), cierra a las {donante.hora_cierre}\n"
-            f"Mensaje del donante:\n{entrada.texto}"
-        )
+        comercio = limpiar_texto_usuario(
+            f"{donante.nombre} ({donante.tipo_comercio}), cierra a las {donante.hora_cierre}", maximo=200
+        ).replace("\n", " ")
+        comercio = delimitar("comercio", comercio).replace("\n", "")
+        mensaje = delimitar("texto_donante", limpiar_texto_usuario(entrada.texto, maximo=MAXIMO_TEXTO))
+        return f"Hora actual: {momento:%H:%M}\n{comercio}\n{mensaje}"
 
     def _postprocesar(
         self,
@@ -479,20 +549,33 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
         entrada: SolicitudInterpretacion,
         momento: datetime,
         aclaraciones: int,
+        alertas: list[str] | None = None,
     ) -> ResultadoInterpretacion:
-        """Lo que calcula el código, no el LLM: kilos, horas y si ya está completo."""
+        """Lo que calcula el código, no el LLM: kilos, horas y si ya está completo. Además valida
+        la respuesta del LLM contra el texto: alimentos mencionados y conservación."""
+        alertas = list(alertas or [])
         alimentos: list[Alimento] = []
         for a in respuesta.alimentos:
-            if a.cantidad <= 0 or not a.nombre.strip():
+            nombre = limpiar_texto_usuario(a.nombre, maximo=80).replace("\n", " ")
+            if a.cantidad <= 0 or not nombre:
+                continue
+            if not alimento_mencionado(nombre, entrada.texto):
+                alertas.append("alimento_no_mencionado")
+                self._anotar(
+                    TipoEntradaBitacora.PENSAMIENTO,
+                    f"El LLM propuso «{nombre}», pero el donante no lo menciona; lo descarto.",
+                    entrada.donativo_id,
+                    paso=3,
+                )
                 continue
             propuesto = Alimento(
-                nombre=a.nombre.strip(),
+                nombre=nombre,
                 cantidad=a.cantidad,
                 unidad=a.unidad,
                 tipo=a.tipo,
                 conservacion=a.conservacion,
                 kg_estimados=estimar_kg(a.cantidad, a.unidad, a.tipo),
-                observaciones=a.observaciones,
+                observaciones=limpiar_texto_usuario(a.observaciones, maximo=MAXIMO_OBSERVACIONES),
             )
             corregido = corregir_tipo(propuesto, entrada.donante)
             if corregido.tipo != propuesto.tipo:
@@ -504,6 +587,8 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
                     paso=3,
                 )
             alimentos.append(corregido)
+        alimentos = self._validar_conservacion(alimentos, entrada.texto, entrada.donativo_id, alertas)
+        alertas = list(dict.fromkeys(alertas))
         hora_preparacion = hora_relativa(entrada.texto, momento) or calcular_hora_preparacion(
             respuesta.hora_preparacion, momento
         )
@@ -520,6 +605,7 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
                 alimentos=alimentos,
                 hora_preparacion=hora_preparacion,
                 recoger_antes_de=recoger_antes_de,
+                alertas=alertas,
             )
         if not alimentos:
             pregunta = respuesta.pregunta or PREGUNTA_SIN_ALIMENTOS
@@ -531,10 +617,38 @@ class AgenteInterprete(Agente[SolicitudInterpretacion, ResultadoInterpretacion])
             hora_preparacion=hora_preparacion,
             recoger_antes_de=recoger_antes_de,
             preguntas=[pregunta],
+            alertas=alertas,
         )
 
+    def _validar_conservacion(
+        self, alimentos: list[Alimento], texto: str, did: str | None, alertas: list[str]
+    ) -> list[Alimento]:
+        """Validación cruzada con `detectar_conservacion`: la conservación de cada perecedero debe
+        aparecer en el texto confiable (el texto sin los fragmentos que parecen órdenes al agente)."""
+        confiable = texto_confiable(texto)
+        mencionadas = conservaciones_mencionadas(confiable)
+        perecederos = [a for a in alimentos if a.tipo in PERECEDEROS]
+        resultado = []
+        for a in alimentos:
+            nueva = a.conservacion
+            if a.tipo in PERECEDEROS and a.conservacion != Conservacion.DESCONOCIDA:
+                if a.conservacion not in mencionadas:
+                    nueva = detectar_conservacion(confiable)
+                    alertas.append("conservacion_corregida")
+                    self._anotar(
+                        TipoEntradaBitacora.PENSAMIENTO,
+                        f"El LLM dijo que «{a.nombre}» está {a.conservacion.value}, pero el texto no lo "
+                        f"menciona; uso lo que dice el texto: {nueva.value}.",
+                        did,
+                        paso=3,
+                    )
+            elif a.tipo in PERECEDEROS and len(mencionadas) == 1 and len(perecederos) == 1:
+                nueva = next(iter(mencionadas))  # el LLM no la vio, pero el texto la dice
+            resultado.append(a if nueva == a.conservacion else a.model_copy(update={"conservacion": nueva}))
+        return resultado
+
     def _interpretar_con_reglas(self, texto: str) -> ResultadoInterpretacion:
-        conservacion = detectar_conservacion(texto)
+        conservacion = detectar_conservacion(texto_confiable(texto))
         alimentos: list[Alimento] = []
         for fragmento in re.split(r",|;|\by\b|\be\b", texto):
             coincidencia = _PATRON.search(fragmento.strip())
