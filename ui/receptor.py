@@ -6,8 +6,8 @@ import streamlit as st
 
 from rescate.dominio.enums import EstadoDonativo as E
 from rescate.dominio.enums import TipoAlimento
-from rescate.dominio.modelos import Participante, Receptor, ahora
-from rescate.servicios import ErrorServicio, ServicioDonativos
+from rescate.dominio.modelos import Actor, Receptor, ahora
+from rescate.servicios import ErrorServicio, Servicios
 from ui.comun import tarjeta_donativo
 
 ETIQUETAS = dict(
@@ -27,19 +27,19 @@ ETIQUETAS = dict(
 )
 
 
-def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> None:
+def mostrar(servicios: Servicios, actor: Actor | None) -> None:
     """Muestra propuestas, entregas y la edición del perfil seleccionado."""
     st.header("Donativos para mi organización")
-    if participante is None:
+    if actor is None or not actor.participante_id:
         st.info("Elige un receptor en la barra lateral.")
         return
-    participante = servicio.participante(participante.id)
+    participante = servicios.participantes.obtener(actor.participante_id)
     if not isinstance(participante, Receptor):
         st.warning("El receptor ya no está disponible. Elige otro participante.")
         return
     if "receptor_aviso" in st.session_state:
         st.success(st.session_state.pop("receptor_aviso"))
-    donativos = servicio.donativos_de_receptor(participante.id)
+    donativos = servicios.distribucion.donativos_de_receptor(actor)
     pendientes = [
         d
         for d in donativos
@@ -73,11 +73,11 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
         if not pendientes:
             st.info("No hay donativos por confirmar.")
         for d in pendientes:
-            tarjeta_donativo(servicio, d)
+            tarjeta_donativo(servicios, actor, d)
             st.caption("El sistema orienta sobre inocuidad; no certifica el alimento.")
             try:
                 if st.button("Aceptar", key=f"receptor_aceptar_{d.id}"):
-                    servicio.aceptar_asignacion(d.id, participante.id)
+                    servicios.distribucion.aceptar(actor, d.id)
                     st.session_state.receptor_aviso = (
                         "Donativo aceptado. Ya aparece para los recolectores."
                     )
@@ -89,10 +89,8 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
                     if not motivo.strip():
                         st.error("Escribe un motivo para la reasignación.")
                     else:
-                        actualizado = servicio.rechazar_asignacion(
-                            d.id, participante.id, motivo
-                        )
-                        nuevo = servicio.participante(actualizado.receptor_id)
+                        actualizado = servicios.distribucion.rechazar(actor, d.id, motivo)
+                        nuevo = servicios.participantes.obtener(actualizado.receptor_id)
                         st.session_state.receptor_aviso = (
                             f"Se reasignó a {nuevo.nombre}."
                             if nuevo
@@ -106,8 +104,8 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
             if d.estado == E.EN_RECOLECCION or (
                 d.estado == E.ASIGNADO and d.asignacion and d.asignacion.aceptada
             ):
-                tarjeta_donativo(servicio, d)
-                recolector = servicio.participante(d.recolector_id)
+                tarjeta_donativo(servicios, actor, d)
+                recolector = servicios.participantes.obtener(d.recolector_id)
                 st.caption(
                     f"Recolector: {recolector.nombre}"
                     if recolector
@@ -116,7 +114,7 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
     with tabs[2]:
         st.metric("Total de kg recibidos", sum(d.kg_totales for d in recibidos))
         for d in recibidos:
-            tarjeta_donativo(servicio, d)
+            tarjeta_donativo(servicios, actor, d)
     with tabs[3], st.form("receptor_perfil"):
         tipos = st.multiselect(
             "Tipos aceptados",
@@ -144,7 +142,8 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
         direccion = st.text_input("Dirección", participante.ubicacion.direccion)
         if st.form_submit_button("Guardar perfil"):
             try:
-                servicio.registrar_participante(
+                servicios.participantes.registrar(
+                    actor,
                     participante.model_copy(
                         update=dict(
                             tipos_aceptados=tipos,

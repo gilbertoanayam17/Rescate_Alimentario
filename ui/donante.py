@@ -14,8 +14,8 @@ import streamlit as st
 
 from rescate.agentes.interprete import MARCA_ACLARACION
 from rescate.dominio.enums import EstadoDonativo, TipoAlimento
-from rescate.dominio.modelos import Donativo, EntradaBitacora, Participante
-from rescate.servicios import ErrorServicio, ServicioDonativos
+from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora, Participante
+from rescate.servicios import ErrorServicio, Servicios
 from ui.comun import historial_estados, insignia_dictamen, tarjeta_donativo, vista_bitacora
 
 EJEMPLOS = {
@@ -43,9 +43,10 @@ def bitacora_en_orden(entradas: list[EntradaBitacora]) -> list[EntradaBitacora]:
     return sorted(entradas, key=lambda e: (e.fecha, ORDEN_AGENTES.get(e.agente, len(ORDEN_AGENTES)), e.paso))
 
 
-def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> None:
+def mostrar(servicios: Servicios, actor: Actor | None) -> None:
     st.header("Publica lo que te sobró")
     st.caption("Escríbelo como se lo dirías a un amigo. Nosotros nos encargamos del resto.")
+    participante = servicios.participantes.obtener(actor.participante_id) if actor else None
     if participante is None:
         st.info("Elige un donante en la barra lateral.")
         return
@@ -63,14 +64,14 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
         )
     for mensaje in chat:
         with st.chat_message(mensaje["rol"]):
-            _contenido(servicio, mensaje)
+            _contenido(servicios, actor, mensaje)
 
     escrito = st.chat_input("¿Qué te sobró hoy?", key=f"donante_entrada_{participante.id}")
     if ejemplo:  # un ejemplo siempre empieza un donativo nuevo
         st.session_state.pop(clave_pendiente, None)
     texto = escrito or ejemplo
     if texto:
-        _conversar(servicio, participante, texto, chat, clave_pendiente)
+        _conversar(servicios, actor, participante, texto, chat, clave_pendiente)
 
     if st.session_state.get(clave_pendiente):
         if st.button(
@@ -80,7 +81,7 @@ def mostrar(servicio: ServicioDonativos, participante: Participante | None) -> N
             st.session_state[clave_chat] = []
             st.rerun()
 
-    _mis_donativos(servicio, participante)
+    _mis_donativos(servicios, actor, participante)
 
 
 # ---------------------------------------------------------------------- chat
@@ -96,7 +97,8 @@ def _ejemplos_rapidos() -> str | None:
 
 
 def _conversar(
-    servicio: ServicioDonativos,
+    servicios: Servicios,
+    actor: Actor,
     participante: Participante,
     texto: str,
     chat: list[dict],
@@ -112,8 +114,8 @@ def _conversar(
     with st.chat_message("assistant"):
         try:
             with st.spinner("Los agentes están revisando tu donativo..."):
-                resultado = servicio.publicar(
-                    texto_completo, participante.id, pendiente["donativo_id"] if pendiente else None
+                resultado = servicios.publicacion.publicar(
+                    actor, texto_completo, pendiente["donativo_id"] if pendiente else None
                 )
         except ErrorServicio as e:
             mensaje = {"rol": "assistant", "tipo": "error", "contenido": str(e)}
@@ -133,24 +135,24 @@ def _conversar(
                 }
                 mensaje = {"rol": "assistant", "tipo": "pregunta", "contenido": " ".join(resultado.preguntas)}
         chat.append(mensaje)
-        _contenido(servicio, mensaje)
+        _contenido(servicios, actor, mensaje)
 
 
-def _contenido(servicio: ServicioDonativos, mensaje: dict) -> None:
+def _contenido(servicios: Servicios, actor: Actor, mensaje: dict) -> None:
     if mensaje["tipo"] == "error":
         st.error(mensaje["contenido"])
         return
     if mensaje["tipo"] != "resultado":
         st.markdown(mensaje["contenido"])
         return
-    donativo = servicio.donativo(mensaje["donativo_id"])
+    donativo = servicios.reportes.donativo(actor, mensaje["donativo_id"])
     if donativo is None:  # p. ej., la base se reinició
         st.markdown(mensaje["contenido"])
         return
-    _resultado(servicio, donativo, mensaje["contenido"])
+    _resultado(servicios, actor, donativo, mensaje["contenido"])
 
 
-def _resultado(servicio: ServicioDonativos, donativo: Donativo, mensaje: str) -> None:
+def _resultado(servicios: Servicios, actor: Actor, donativo: Donativo, mensaje: str) -> None:
     if donativo.estado == EstadoDonativo.RECHAZADO:
         st.info("Gracias por avisar; por seguridad este alimento no se puede donar.")
     else:
@@ -182,7 +184,7 @@ def _resultado(servicio: ServicioDonativos, donativo: Donativo, mensaje: str) ->
 
     if donativo.estado != EstadoDonativo.RECHAZADO and donativo.asignacion:
         a = donativo.asignacion
-        receptor = servicio.participante(a.receptor_id)
+        receptor = servicios.participantes.obtener(a.receptor_id)
         if receptor:
             st.markdown(f"**Receptor:** {receptor.nombre}")
         elif a.requiere_coordinador:
@@ -191,27 +193,27 @@ def _resultado(servicio: ServicioDonativos, donativo: Donativo, mensaje: str) ->
             st.caption(a.justificacion)
 
     with st.expander("¿Cómo lo decidieron los agentes?"):
-        vista_bitacora(bitacora_en_orden(servicio.bitacora_de(donativo.id)))
+        vista_bitacora(bitacora_en_orden(servicios.reportes.bitacora_de(actor, donativo.id)))
 
 
 # --------------------------------------------------------------- mis donativos
 
 
-def _mis_donativos(servicio: ServicioDonativos, participante: Participante) -> None:
+def _mis_donativos(servicios: Servicios, actor: Actor, participante: Participante) -> None:
     st.subheader("Mis donativos")
-    donativos = servicio.donativos_de_donante(participante.id)
+    donativos = servicios.publicacion.donativos_de_donante(actor)
     if not donativos:
         st.caption("Aún no has publicado donativos.")
         return
     for donativo in donativos:
-        tarjeta_donativo(servicio, donativo)
+        tarjeta_donativo(servicios, actor, donativo)
         with st.expander("Historial de estados"):
-            historial_estados(servicio, donativo.id)
+            historial_estados(servicios, actor, donativo.id)
         aceptado = bool(donativo.asignacion and donativo.asignacion.aceptada)
         if donativo.estado in CANCELABLES and not aceptado:
             if st.button("Cancelar", key=f"donante_cancelar_{donativo.id}"):
                 try:
-                    servicio.cancelar(donativo.id)
+                    servicios.publicacion.cancelar(actor, donativo.id)
                 except ErrorServicio as e:
                     st.error(str(e))
                 else:

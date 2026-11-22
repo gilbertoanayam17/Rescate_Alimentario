@@ -6,8 +6,9 @@ from datetime import datetime
 import pytest
 
 from rescate.agentes.asignador import AgenteAsignador
-from rescate.dominio.enums import Dictamen, TipoEntradaBitacora
+from rescate.dominio.enums import Dictamen, Rol, TipoEntradaBitacora
 from rescate.dominio.modelos import (
+    Actor,
     Alimento,
     DictamenInocuidad,
     Donativo,
@@ -16,7 +17,7 @@ from rescate.dominio.modelos import (
 
 
 @pytest.fixture
-def caso(servicio, donante, receptores, llm_falso):
+def caso(aplicacion, donante, receptores, llm_falso):
     d = Donativo(
         donante_id=donante.id,
         texto_original="pan",
@@ -26,9 +27,9 @@ def caso(servicio, donante, receptores, llm_falso):
     )
     agente = AgenteAsignador(
         llm_falso,
-        servicio.bitacora,
-        servicio.repo_participantes,
-        servicio.repo_donativos,
+        aplicacion.bitacora,
+        aplicacion.repos.participantes,
+        aplicacion.repos.donativos,
         reloj=lambda: datetime(2026, 11, 5, 12),
     )
     return agente, SolicitudAsignacion(
@@ -36,11 +37,11 @@ def caso(servicio, donante, receptores, llm_falso):
     )
 
 
-def test_sin_llm_y_bitacora(caso, servicio):
+def test_sin_llm_y_bitacora(caso, aplicacion):
     agente, solicitud = caso
     salida = agente.ejecutar(solicitud)
     assert salida.receptor_id == "rec-cerca"
-    tipos = {e.tipo for e in servicio.bitacora_de(solicitud.donativo.id)}
+    tipos = {e.tipo for e in aplicacion.bitacora.de_donativo(solicitud.donativo.id)}
     assert {
         TipoEntradaBitacora.ACCION,
         TipoEntradaBitacora.OBSERVACION,
@@ -68,7 +69,7 @@ def test_llm_puede_elegir_segundo(caso, llm_falso):
     )
 
 
-def test_llm_no_puede_elegir_segundo_sin_ventaja(caso, llm_falso, servicio):
+def test_llm_no_puede_elegir_segundo_sin_ventaja(caso, llm_falso, aplicacion):
     # Empatados salvo la distancia: preferir al lejano no tiene sustento
     llm_falso.programar(
         "DecisionAsignacion",
@@ -82,20 +83,20 @@ def test_llm_no_puede_elegir_segundo_sin_ventaja(caso, llm_falso, servicio):
     assert salida.receptor_id == "rec-cerca"
     errores = [
         e.contenido
-        for e in servicio.bitacora_de(caso[1].donativo.id)
+        for e in aplicacion.bitacora.de_donativo(caso[1].donativo.id)
         if e.tipo == TipoEntradaBitacora.ERROR
     ]
     assert any("no supera" in e for e in errores)
 
 
-def test_descartados_se_explican_con_nombres_y_en_espanol(caso, servicio):
+def test_descartados_se_explican_con_nombres_y_en_espanol(caso, aplicacion):
     caso[1].donativo.alimentos.append(
         Alimento(nombre="leche", cantidad=1, kg_estimados=1, tipo="lacteo")
     )
     caso[0].ejecutar(caso[1])
     observacion = next(
         e.contenido
-        for e in servicio.bitacora_de(caso[1].donativo.id)
+        for e in aplicacion.bitacora.de_donativo(caso[1].donativo.id)
         if e.contenido.startswith("1 compatibles")
     )
     assert "Comedor Cerca (no acepta lácteos)" in observacion
@@ -169,9 +170,9 @@ def test_decision_vacia_activa_respaldo(caso, llm_falso):
     assert caso[0].ejecutar(caso[1]).receptor_id == "rec-cerca"
 
 
-def test_bitacora_del_asignador_ordena_y_conserva_calculos(caso, servicio):
+def test_bitacora_del_asignador_ordena_y_conserva_calculos(caso, aplicacion):
     caso[0].ejecutar(caso[1])
-    entradas = servicio.bitacora_de(caso[1].donativo.id)
+    entradas = aplicacion.bitacora.de_donativo(caso[1].donativo.id)
     assert [e.paso for e in entradas] == list(range(1, len(entradas) + 1))
     observaciones = [e for e in entradas if "candidatos" in e.datos]
     assert len(observaciones) == 1
@@ -183,8 +184,16 @@ def test_bitacora_del_asignador_ordena_y_conserva_calculos(caso, servicio):
     }
 
 
-def _pantalla(servicio, pagina, participante=None):
-    """Ejecuta una página real con la fachada y DuckDB de la prueba."""
+def _como(participante):
+    return Actor(rol=participante.rol, participante_id=participante.id)
+
+
+def _publicar(aplicacion, donante, texto):
+    return aplicacion.servicios.publicacion.publicar(_como(donante), texto).donativo
+
+
+def _pantalla(aplicacion, pagina, participante=None):
+    """Ejecuta una página real con los servicios y DuckDB de la prueba."""
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_string(
@@ -193,13 +202,15 @@ def _pantalla(servicio, pagina, participante=None):
         "paginas = {'receptor': receptor, 'recolector': recolector,\n"
         "           'coordinador': coordinador}\n"
         "paginas[st.session_state['prueba_pagina']].mostrar(\n"
-        "    st.session_state['prueba_servicio'],\n"
-        "    st.session_state['prueba_participante'])\n",
+        "    st.session_state['prueba_servicios'],\n"
+        "    st.session_state['prueba_actor'])\n",
         default_timeout=30,
     )
-    app.session_state["prueba_servicio"] = servicio
+    app.session_state["prueba_servicios"] = aplicacion.servicios
     app.session_state["prueba_pagina"] = pagina
-    app.session_state["prueba_participante"] = participante
+    app.session_state["prueba_actor"] = (
+        _como(participante) if participante else Actor(rol=Rol.COORDINADOR)
+    )
     app.run()
     assert not app.exception
     return app
@@ -210,52 +221,47 @@ def _campo(app, tipo, etiqueta):
 
 
 def test_pantallas_rechazar_aceptar_recoger_entregar_y_metricas(
-    servicio, donante, receptores, recolector
+    aplicacion, donante, receptores, recolector
 ):
     from rescate.dominio.enums import EstadoDonativo
 
-    donativo = servicio.publicar(
-        "Me sobraron 15 bolillos y 5 kg de jitomate", donante.id
-    ).donativo
+    donativo = _publicar(aplicacion, donante, "Me sobraron 15 bolillos y 5 kg de jitomate")
     primero = donativo.receptor_id
-    receptor = _pantalla(servicio, "receptor", servicio.participante(primero))
+    receptor = _pantalla(aplicacion, "receptor", aplicacion.repos.participantes.obtener(primero))
     receptor.button(key=f"receptor_rechazar_{donativo.id}").click().run()
-    assert receptor.error and servicio.donativo(donativo.id).receptor_id == primero
+    assert receptor.error and aplicacion.repos.donativos.obtener(donativo.id).receptor_id == primero
     receptor.text_input(key=f"receptor_motivo_{donativo.id}").set_value(
         "Sin espacio"
     ).run()
     receptor.button(key=f"receptor_rechazar_{donativo.id}").click().run()
     assert not receptor.exception
-    donativo = servicio.donativo(donativo.id)
+    donativo = aplicacion.repos.donativos.obtener(donativo.id)
     assert donativo.receptor_id != primero
     assert primero in donativo.receptores_descartados
     assert any("Se reasignó" in s.value for s in receptor.success)
-    receptor = _pantalla(
-        servicio, "receptor", servicio.participante(donativo.receptor_id)
+    receptor = _pantalla(aplicacion, "receptor", aplicacion.repos.participantes.obtener(donativo.receptor_id)
     )
     receptor.button(key=f"receptor_aceptar_{donativo.id}").click().run()
     assert not receptor.exception
-    assert servicio.donativo(donativo.id).asignacion.aceptada
-    voluntario = _pantalla(servicio, "recolector", recolector)
+    assert aplicacion.repos.donativos.obtener(donativo.id).asignacion.aceptada
+    voluntario = _pantalla(aplicacion, "recolector", recolector)
     voluntario.button(key=f"recolector_recoger_{donativo.id}").click().run()
     assert not voluntario.exception
-    assert servicio.donativo(donativo.id).estado == EstadoDonativo.EN_RECOLECCION
+    assert aplicacion.repos.donativos.obtener(donativo.id).estado == EstadoDonativo.EN_RECOLECCION
     voluntario.button(key=f"recolector_entregar_{donativo.id}").click().run()
     assert not voluntario.exception
-    assert servicio.donativo(donativo.id).estado == EstadoDonativo.ENTREGADO
-    rechazado = servicio.publicar(
-        "Me sobraron 2 kg de arroz con moho", donante.id
-    ).donativo
+    assert aplicacion.repos.donativos.obtener(donativo.id).estado == EstadoDonativo.ENTREGADO
+    rechazado = _publicar(aplicacion, donante, "Me sobraron 2 kg de arroz con moho")
     assert rechazado.estado == EstadoDonativo.RECHAZADO and not rechazado.receptor_id
-    assert not any(e.agente == "Asignador" for e in servicio.bitacora_de(rechazado.id))
-    coordinador = _pantalla(servicio, "coordinador")
+    assert not any(e.agente == "Asignador" for e in aplicacion.bitacora.de_donativo(rechazado.id))
+    coordinador = _pantalla(aplicacion, "coordinador")
     assert (
         float(_campo(coordinador, "metric", "Kg entregados").value)
         == donativo.kg_totales
     )
     assert _campo(coordinador, "metric", "No aptos").value == "1"
     assert _campo(coordinador, "metric", "Donativos activos").value == "0"
-    eventos = [h["evento"] for h in servicio.historial(donativo.id)]
+    eventos = [h["evento"] for h in aplicacion.repos.donativos.historial(donativo.id)]
     assert eventos == [
         "publicar",
         "evaluar_apto",
@@ -270,100 +276,100 @@ def test_pantallas_rechazar_aceptar_recoger_entregar_y_metricas(
 
 
 @pytest.mark.parametrize("rol", ["donante", "receptor", "recolector"])
-def test_coordinador_alta_y_eliminacion_confirmada(servicio, rol):
+def test_coordinador_alta_y_eliminacion_confirmada(aplicacion, rol):
     from rescate.dominio.enums import Rol
 
-    app = _pantalla(servicio, "coordinador")
+    app = _pantalla(aplicacion, "coordinador")
     app.selectbox(key="coordinador_rol").select(Rol(rol)).run()
     _campo(app, "text_input", "Nombre").set_value(f"Prueba {rol}")
     _campo(app, "text_input", "Dirección").set_value("Centro de Guadalajara")
     _campo(app, "button", "Registrar participante").click().run()
     assert not app.exception
-    assert len(servicio.participantes()) == 1
-    persona = servicio.participantes()[0]
+    assert len(aplicacion.servicios.participantes.listar()) == 1
+    persona = aplicacion.servicios.participantes.listar()[0]
     assert persona.rol == Rol(rol) and persona.nombre == f"Prueba {rol}"
     assert app.button(key="coordinador_eliminar").disabled
     app.checkbox(key="coordinador_confirmar").check().run()
     app.button(key="coordinador_eliminar").click().run()
-    assert not app.exception and not servicio.participantes()
+    assert not app.exception and not aplicacion.servicios.participantes.listar()
 
 
-def test_coordinador_nombre_obligatorio(servicio):
-    app = _pantalla(servicio, "coordinador")
+def test_coordinador_nombre_obligatorio(aplicacion):
+    app = _pantalla(aplicacion, "coordinador")
     _campo(app, "text_input", "Nombre").set_value("   ")
     _campo(app, "button", "Registrar participante").click().run()
     assert not app.exception and app.error
-    assert not servicio.participantes()
+    assert not aplicacion.servicios.participantes.listar()
 
 
-def test_receptor_guarda_perfil(servicio, receptores):
-    app = _pantalla(servicio, "receptor", receptores[0])
+def test_receptor_guarda_perfil(aplicacion, receptores):
+    app = _pantalla(aplicacion, "receptor", receptores[0])
     _campo(app, "number_input", "Capacidad kg/día").set_value(75.0)
     _campo(app, "checkbox", "Tiene refrigeración").check()
     _campo(app, "text_input", "Dirección").set_value("Nueva dirección ficticia")
     _campo(app, "button", "Guardar perfil").click().run()
     assert not app.exception
-    guardado = servicio.participante(receptores[0].id)
+    guardado = aplicacion.repos.participantes.obtener(receptores[0].id)
     assert guardado.capacidad_kg_dia == 75 and guardado.tiene_refrigeracion
     assert guardado.ubicacion.direccion == "Nueva dirección ficticia"
 
 
-def test_coordinador_reintenta_despues_del_alta(servicio, donante):
+def test_coordinador_reintenta_despues_del_alta(aplicacion, donante):
     from rescate.dominio.modelos import Receptor
 
-    donativo = servicio.publicar("Me sobraron 10 bolillos", donante.id).donativo
-    app = _pantalla(servicio, "coordinador")
+    donativo = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
+    app = _pantalla(aplicacion, "coordinador")
     assert _campo(app, "metric", "Sin receptor").value == "1"
-    servicio.registrar_participante(
+    aplicacion.servicios.participantes.registrar(Actor(rol=Rol.COORDINADOR), 
         Receptor(nombre="Nuevo comedor", ubicacion=donante.ubicacion)
     )
     app.button(key=f"coordinador_reintentar_{donativo.id}").click().run()
-    assert not app.exception and servicio.donativo(donativo.id).receptor_id
+    assert not app.exception and aplicacion.repos.donativos.obtener(donativo.id).receptor_id
     assert _campo(app, "metric", "Sin receptor").value == "0"
 
 
-def test_recolector_no_toma_donativo_vencido(servicio, donante, receptores, recolector):
+def test_recolector_no_toma_donativo_vencido(aplicacion, donante, receptores, recolector):
     from datetime import timedelta
 
     from rescate.dominio.modelos import ahora
 
-    d = servicio.publicar("Me sobraron 10 bolillos", donante.id).donativo
-    servicio.aceptar_asignacion(d.id, d.receptor_id)
-    d = servicio.donativo(d.id)
+    d = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
+    aplicacion.servicios.distribucion.aceptar(Actor(rol=Rol.RECEPTOR, participante_id=d.receptor_id), d.id)
+    d = aplicacion.repos.donativos.obtener(d.id)
     d.recoger_antes_de = ahora() - timedelta(seconds=1)
-    servicio.repo_donativos.guardar(d)
-    app = _pantalla(servicio, "recolector", recolector)
+    aplicacion.repos.donativos.guardar(d)
+    app = _pantalla(aplicacion, "recolector", recolector)
     assert app.button(key=f"recolector_recoger_{d.id}").disabled
 
 
 def test_recolector_no_disponible_no_toma_donativo(
-    servicio, donante, receptores, recolector
+    aplicacion, donante, receptores, recolector
 ):
-    d = servicio.publicar("Me sobraron 10 bolillos", donante.id).donativo
-    servicio.aceptar_asignacion(d.id, d.receptor_id)
+    d = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
+    aplicacion.servicios.distribucion.aceptar(Actor(rol=Rol.RECEPTOR, participante_id=d.receptor_id), d.id)
     recolector.disponible = False
-    servicio.registrar_participante(recolector)
-    app = _pantalla(servicio, "recolector", recolector)
+    aplicacion.servicios.participantes.registrar(Actor(rol=Rol.COORDINADOR), recolector)
+    app = _pantalla(aplicacion, "recolector", recolector)
     assert app.button(key=f"recolector_recoger_{d.id}").disabled
 
 
 def test_coordinador_conserva_participantes_del_historial(
-    servicio, donante, receptores, recolector
+    aplicacion, donante, receptores, recolector
 ):
-    d = servicio.publicar("Me sobraron 10 bolillos", donante.id).donativo
+    d = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
     primero = d.receptor_id
-    servicio.rechazar_asignacion(d.id, primero, "Sin espacio")
-    app = _pantalla(servicio, "coordinador")
+    aplicacion.servicios.distribucion.rechazar(Actor(rol=Rol.RECEPTOR, participante_id=primero), d.id, "Sin espacio")
+    app = _pantalla(aplicacion, "coordinador")
     app.selectbox(key="coordinador_eliminar_id").select(
-        servicio.participante(primero)
+        aplicacion.repos.participantes.obtener(primero)
     ).run()
     app.checkbox(key="coordinador_confirmar").check().run()
     assert app.button(key="coordinador_eliminar").disabled
 
 
-def test_coordinador_filtra_bitacora(servicio, donante, receptores):
-    d = servicio.publicar("Me sobraron 10 bolillos", donante.id).donativo
-    app = _pantalla(servicio, "coordinador")
+def test_coordinador_filtra_bitacora(aplicacion, donante, receptores):
+    d = _publicar(aplicacion, donante, "Me sobraron 10 bolillos")
+    app = _pantalla(aplicacion, "coordinador")
     app.selectbox(key="coordinador_agente").select("Asignador").run()
     app.text_input(key="coordinador_donativo").set_value(d.id).run()
     entradas = app.tabs[4].markdown

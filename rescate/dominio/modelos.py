@@ -5,18 +5,21 @@ renombrar o quitar campos rompe el trabajo del otro integrante.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, Union
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .enums import (
     Conservacion,
     Dictamen,
+    EstadoCaso,
     EstadoDonativo,
+    EstadoPronostico,
     Rol,
     TipoAlimento,
+    TipoCaso,
     TipoEntradaBitacora,
 )
 
@@ -45,6 +48,7 @@ class Participante(BaseModel):
     rol: Rol
     ubicacion: Ubicacion
     telefono: str = ""
+    pin_hash: str = ""  # PBKDF2 del PIN de inicio de sesión; nunca el PIN en claro
 
 
 class Donante(Participante):
@@ -68,6 +72,15 @@ class Recolector(Participante):
     zona: str = ""
     transporte: str = "auto"
     disponible: bool = True
+
+
+class Actor(BaseModel):
+    """Quién hace una operación. Lo crea la sesión; los servicios lo validan contra la base."""
+
+    model_config = ConfigDict(frozen=True)
+
+    rol: Rol
+    participante_id: str | None = None  # None solo para el coordinador
 
 
 ParticipanteConcreto = Union[Donante, Receptor, Recolector]
@@ -98,6 +111,7 @@ class DictamenInocuidad(BaseModel):
     vida_util_horas: float | None = None
     requiere_refrigeracion: bool = False
     reglas_citadas: list[str] = []  # p. ej. "NOM-251-SSA1-2009, numeral 7.3.3"
+    requiere_revision: bool = False  # el coordinador debe revisarlo (caso INOCUIDAD_DUDOSA)
 
 
 class Asignacion(BaseModel):
@@ -172,6 +186,7 @@ class ResultadoInterpretacion(BaseModel):
     hora_preparacion: datetime | None = None
     recoger_antes_de: datetime | None = None
     preguntas: list[str] = []  # si completo es False, lo que hay que preguntarle al donante
+    alertas: list[str] = []  # códigos de seguridad: posible_inyeccion, conservacion_corregida, ...
 
 
 class SolicitudAsignacion(BaseModel):
@@ -180,3 +195,61 @@ class SolicitudAsignacion(BaseModel):
     donativo: Donativo
     donante: Donante
     receptores: list[Receptor]
+
+
+# ------------------------------------------- eventos, avisos, casos y pronósticos
+
+
+class EventoDonativo(BaseModel):
+    """Lo que publica el ciclo de vida en el bus de eventos (patrón Observer)."""
+
+    donativo_id: str
+    evento: str  # valor de Evento, o "publicar" / "aceptar"
+    anterior: EstadoDonativo | None = None
+    nuevo: EstadoDonativo
+    motivo: str = ""
+    actor: Actor | None = None
+    fecha: datetime = Field(default_factory=ahora)
+
+
+class Aviso(BaseModel):
+    """CAR-06: notificación dentro de la app para un participante o para la coordinación."""
+
+    id: str = Field(default_factory=nuevo_id)
+    rol: Rol  # rol del destinatario
+    destinatario_id: str | None = None  # None = toda la coordinación
+    donativo_id: str | None = None
+    titulo: str
+    mensaje: str
+    leido: bool = False
+    fecha: datetime = Field(default_factory=ahora)
+
+
+class CasoEscalado(BaseModel):
+    """CAR-10: caso en la bandeja del coordinador."""
+
+    id: str = Field(default_factory=nuevo_id)
+    tipo: TipoCaso
+    donativo_id: str | None = None
+    motivo: str
+    emisor: str  # "Intérprete", "Inocuidad", "Asignador", "Distribución"
+    estado: EstadoCaso = EstadoCaso.ABIERTO
+    resolucion: str = ""
+    creado: datetime = Field(default_factory=ahora)
+    resuelto: datetime | None = None
+
+
+class Pronostico(BaseModel):
+    """CAR-07: excedente probable de un donante en un día. Kilos y confianza los calcula código."""
+
+    id: str = Field(default_factory=nuevo_id)
+    donante_id: str
+    fecha: date
+    tipo: TipoAlimento
+    descripcion: str
+    kg_esperados: float
+    confianza: float
+    mensaje: str
+    receptor_sugerido_id: str | None = None  # pre-reserva por puntuación determinista
+    estado: EstadoPronostico = EstadoPronostico.VIGENTE
+    creado: datetime = Field(default_factory=ahora)

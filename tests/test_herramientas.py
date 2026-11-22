@@ -66,19 +66,19 @@ def test_tipo_no_aceptado(datos):
     assert not evaluar_compatibilidad(d, r).compatible
 
 
-def test_capacidad_y_equidad(datos, servicio):
+def test_capacidad_y_equidad(datos, repos):
     _, d, r = datos
     from rescate.dominio.enums import EstadoDonativo
 
     d.estado = EstadoDonativo.ENTREGADO
     d.asignacion = Asignacion(receptor_id=r.id)
     d.actualizado = ahora() - timedelta(days=3)
-    servicio.repo_donativos.guardar(d)
-    assert kg_disponibles(r, servicio.repo_donativos) == 40
-    assert kg_recibidos_semana(r.id, servicio.repo_donativos) == 10
+    repos.donativos.guardar(d)
+    assert kg_disponibles(r, repos.donativos) == 40
+    assert kg_recibidos_semana(r.id, repos.donativos) == 10
     d.actualizado = ahora() - timedelta(days=10)
-    servicio.repo_donativos.guardar(d)
-    assert kg_recibidos_semana(r.id, servicio.repo_donativos) == 0
+    repos.donativos.guardar(d)
+    assert kg_recibidos_semana(r.id, repos.donativos) == 0
 
 
 def test_criterios_extensibles(datos, donante):
@@ -133,7 +133,7 @@ def test_puntaje_suma_ponderada_y_desempate_estable(datos, donante):
     assert [c.receptor_id for c in clasificados] == sorted([r.id, "aaa"])
 
 
-def test_capacidad_solo_cuenta_compromisos_activos_del_dia(datos, servicio):
+def test_capacidad_solo_cuenta_compromisos_activos_del_dia(datos, repos):
     from rescate.dominio.enums import EstadoDonativo as E
 
     t, d, r = datos
@@ -152,10 +152,10 @@ def test_capacidad_solo_cuenta_compromisos_activos_del_dia(datos, servicio):
         copia.id = f"donativo-{i}"
         copia.estado = estado
         copia.asignacion = Asignacion(receptor_id=r.id, fecha=t)
-        servicio.repo_donativos.guardar(copia)
-    assert kg_disponibles(r, servicio.repo_donativos, t.date()) == 0
+        repos.donativos.guardar(copia)
+    assert kg_disponibles(r, repos.donativos, t.date()) == 0
     assert (
-        kg_disponibles(r, servicio.repo_donativos, (t + timedelta(days=1)).date()) == 25
+        kg_disponibles(r, repos.donativos, (t + timedelta(days=1)).date()) == 25
     )
 
 

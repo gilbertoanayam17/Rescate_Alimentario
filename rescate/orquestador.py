@@ -11,7 +11,7 @@
                               asignar -> END
 
 El orquestador solo coordina: no guarda nada ni cambia estados. Eso lo hace
-ServicioDonativos con el resultado. Depende de los agentes por su interfaz
+los servicios (ServicioPublicacion y ServicioDistribucion) con el resultado. Depende de los agentes por su interfaz
 `ejecutar`, así que cada integrante cambia su agente sin tocar este archivo.
 
 Archivo COMPARTIDO (fase 0).

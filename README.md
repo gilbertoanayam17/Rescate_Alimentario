@@ -69,7 +69,9 @@ en caché. Un índice generado con embeddings simulados se reconstruye al usar e
 | Capa | Carpeta | Qué hace |
 | --- | --- | --- |
 | Interfaz | `app.py`, `ui/` | Streamlit con selector de rol (donante, receptor, recolector, coordinador) |
-| Fachada | `rescate/servicios.py` | Único punto de entrada para la interfaz; aplica el ciclo de vida |
+| Servicios | `rescate/servicios/` | Lo único que usa la interfaz: `ServicioParticipantes`, `ServicioPublicacion` y `ServicioDistribucion` (una responsabilidad cada uno), más reportes, avisos, casos y pronósticos. Cada operación recibe el `Actor` y lo valida contra la base |
+| Ciclo de vida y eventos | `rescate/servicios/ciclo_vida.py`, `eventos.py` | Aplica las transiciones (State), guarda el historial y publica eventos (Observer) |
+| Mediador | `rescate/mediador.py` | Lleva los casos dudosos o sin receptor a la bandeja del coordinador (Mediator) |
 | Orquestador | `rescate/orquestador.py` | Grafo de LangGraph: interpretar → evaluar → asignar |
 | Agentes | `rescate/agentes/` | Intérprete, Inocuidad y Asignador, con bitácora de razonamiento |
 | Herramientas | `rescate/herramientas/` | Cálculos deterministas: distancia, capacidad, puntuación |
