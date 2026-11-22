@@ -14,16 +14,19 @@ permisos: los servicios validan el actor y las reglas (por ejemplo, cancelar).
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import streamlit as st
 
 from rescate.agentes.interprete import MARCA_ACLARACION
 from rescate.dominio.enums import EstadoDonativo, EstadoPronostico, TipoAlimento
-from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora, Participante
+from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora, Participante, ahora
 from rescate.servicios import ErrorServicio, Servicios
 from ui.componentes_prediccion import frase_sugerida, tarjeta_pronostico
 from ui.comun import (
     historial_estados,
     insignia_dictamen,
+    metricas_impacto,
     tarjeta_donativo,
     vista_bitacora,
 )
@@ -266,8 +269,8 @@ def _resultado(servicios: Servicios, actor: Actor, donativo: Donativo, mensaje: 
 
 
 def _mis_donativos(servicios: Servicios, actor: Actor, participante: Participante) -> None:
+    _mi_impacto(servicios, actor)
     st.subheader("Mis donativos")
-    # Aquí arriba va el bloque "Mi impacto" (kg rescatados, comidas, CO2e) de la tarea A3.
     donativos = servicios.publicacion.donativos_de_donante(actor)
     if not donativos:
         st.caption("Aún no has publicado donativos.")
@@ -283,6 +286,13 @@ def _mis_donativos(servicios: Servicios, actor: Actor, participante: Participant
         with st.expander(f"Terminados ({len(terminados)})"):
             for donativo in terminados:
                 _donativo(servicios, actor, donativo)
+
+
+def _mi_impacto(servicios: Servicios, actor: Actor) -> None:
+    """Kg entregados, raciones y CO2e del donante en los últimos 12 meses (tarea A3)."""
+    hoy = ahora().date()
+    st.subheader("Mi impacto (últimos 12 meses)")
+    metricas_impacto(servicios.reportes.tablero(actor, hoy - timedelta(days=365), hoy))
 
 
 def _donativo(servicios: Servicios, actor: Actor, donativo: Donativo) -> None:

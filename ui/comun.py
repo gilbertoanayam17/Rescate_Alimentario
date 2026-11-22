@@ -10,6 +10,7 @@ import streamlit as st
 from rescate.dominio.enums import Dictamen, EstadoDonativo, TipoEntradaBitacora
 from rescate.dominio.modelos import Actor, Donativo, EntradaBitacora
 from rescate.servicios import ErrorServicio, Servicios
+from rescate.servicios.reportes import TableroImpacto
 
 ETIQUETA_ESTADO = {
     EstadoDonativo.PUBLICADO: ("Publicado", "gray"),
@@ -117,3 +118,14 @@ def panel_avisos(servicios: Servicios, actor: Actor | None) -> None:
                 except ErrorServicio as exc:
                     st.error(str(exc))
                 st.rerun()
+
+
+def metricas_impacto(tablero: TableroImpacto) -> None:
+    """Las cifras clave del impacto (CAR-08), calculadas por código, con sus fuentes."""
+    r = tablero.resumen
+    cols = st.columns(4)
+    cols[0].metric("Kg rescatados", f"{r.kg:,.1f}")
+    cols[1].metric("Raciones equivalentes", f"{r.raciones:,}")
+    cols[2].metric("CO2e evitado (kg)", f"{r.co2e_kg:,.1f}")
+    cols[3].metric("Donativos entregados", f"{r.donativos:,}")
+    st.caption(tablero.fuentes)
