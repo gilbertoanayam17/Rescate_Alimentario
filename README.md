@@ -92,9 +92,7 @@ certificación sanitaria. Los participantes de la demo son ficticios.
 
 ## Arquitectura
 
-<!-- PENDIENTE: imagen docs/img/arquitectura_final.png, se genera con herramientas_docs (Gilberto). -->
-> **Imagen de arquitectura final: pendiente** (`docs/img/arquitectura_final.png`). Mientras tanto,
-> el diagrama de componentes está en [docs/uml/componentes.png](docs/uml/componentes.png).
+![Arquitectura final: componentes del sistema](docs/img/arquitectura_final.png)
 
 | Capa | Carpeta | Qué hace |
 | --- | --- | --- |
