@@ -10,6 +10,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from rescate.dominio.modelos import fijar_hora_demo
+
 RAIZ = Path(__file__).resolve().parent.parent
 load_dotenv(RAIZ / ".env")
 
@@ -34,10 +36,17 @@ class Configuracion:
     ruta_indice: Path
     pin_demo: str = "1234"  # PIN que reciben los participantes de la semilla sin PIN
     pin_coordinador: str = "0000"  # PIN de la sesión del coordinador
+    hora_demo: str | None = None  # "HH:MM": el reloj de la app corre desde esa hora de hoy
 
 
 def cargar_configuracion() -> Configuracion:
+    """Lee .env y aplica la hora de demo (HORA_DEMO) al reloj de toda la app."""
     perfil = os.getenv("PERFIL_MODELO", "ligero").strip().lower()
+    hora_demo = os.getenv("HORA_DEMO", "").strip() or None
+    try:
+        fijar_hora_demo(hora_demo)
+    except ValueError as e:
+        raise ValueError(f"HORA_DEMO debe tener el formato HH:MM (24 h); se leyó {hora_demo!r}.") from e
     return Configuracion(
         perfil=perfil,
         modelo=os.getenv("MODELO_LLM") or PERFILES.get(perfil, PERFILES["ligero"]),
@@ -50,4 +59,5 @@ def cargar_configuracion() -> Configuracion:
         ruta_indice=RAIZ / "datos" / "indice",
         pin_demo=os.getenv("PIN_DEMO", "1234").strip(),
         pin_coordinador=os.getenv("PIN_COORDINADOR", "0000").strip(),
+        hora_demo=hora_demo,
     )

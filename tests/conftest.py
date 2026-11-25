@@ -15,6 +15,17 @@ from rescate.dominio.modelos import Actor, Donante, Receptor, Recolector, Ubicac
 from rescate.llm.falso import ClienteLLMFalso
 
 
+@pytest.fixture(autouse=True)
+def sin_hora_demo(monkeypatch):
+    """Las pruebas usan la hora real aunque el .env de quien las corre tenga HORA_DEMO."""
+    from rescate.dominio.modelos import fijar_hora_demo
+
+    monkeypatch.setenv("HORA_DEMO", "")
+    fijar_hora_demo(None)
+    yield
+    fijar_hora_demo(None)
+
+
 @pytest.fixture
 def llm_falso() -> ClienteLLMFalso:
     return ClienteLLMFalso()
