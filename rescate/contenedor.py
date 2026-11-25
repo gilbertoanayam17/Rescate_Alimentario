@@ -140,6 +140,8 @@ def construir_aplicacion(
             if llm.disponible()
             else "Sin LLM: los agentes usan sus reglas de respaldo"
         ),
+        correo_coordinacion=config.correo_coordinacion,
+        telefono_coordinacion=config.telefono_coordinacion,
     )
 
     if cargar_datos_semilla and repos.participantes.vacio() and Path(config.ruta_semilla).exists():

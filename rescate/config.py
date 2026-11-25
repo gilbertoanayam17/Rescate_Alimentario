@@ -37,6 +37,8 @@ class Configuracion:
     pin_demo: str = "1234"  # PIN que reciben los participantes de la semilla sin PIN
     pin_coordinador: str = "0000"  # PIN de la sesión del coordinador
     hora_demo: str | None = None  # "HH:MM": el reloj de la app corre desde esa hora de hoy
+    correo_coordinacion: str = ""  # contacto para pedir alta o PIN nuevo (pantalla de entrada)
+    telefono_coordinacion: str = ""
 
 
 def cargar_configuracion() -> Configuracion:
@@ -60,4 +62,6 @@ def cargar_configuracion() -> Configuracion:
         pin_demo=os.getenv("PIN_DEMO", "1234").strip(),
         pin_coordinador=os.getenv("PIN_COORDINADOR", "0000").strip(),
         hora_demo=hora_demo,
+        correo_coordinacion=os.getenv("CORREO_COORDINACION", "").strip(),
+        telefono_coordinacion=os.getenv("TELEFONO_COORDINACION", "").strip(),
     )

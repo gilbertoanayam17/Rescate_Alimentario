@@ -27,7 +27,7 @@ def tarjeta_pronostico(
     tipo = NOMBRE_TIPO.get(pronostico.tipo, pronostico.tipo.value)
     dia = DIAS_PLURAL[pronostico.fecha.weekday()]
     with st.container(border=True):
-        titulo = f"🔮 **Pronóstico para hoy**{f' · {nombre_donante}' if nombre_donante else ''}"
+        titulo = f":material/insights: **Pronóstico para hoy**{f' · {nombre_donante}' if nombre_donante else ''}"
         st.markdown(titulo)
         st.write(pronostico.mensaje)
         detalle = (
@@ -41,8 +41,8 @@ def tarjeta_pronostico(
             return None
         izquierda, derecha = st.columns(2)
         clave = clave or pronostico.id
-        if izquierda.button("Publicar ahora", key=f"pronostico_publicar_{clave}", type="primary"):
+        if izquierda.button("Publicar ahora", key=f"pronostico_publicar_{clave}", type="primary", icon=":material/send:"):
             return "publicar"
-        if derecha.button("Hoy no", key=f"pronostico_descartar_{clave}"):
+        if derecha.button("Hoy no", key=f"pronostico_descartar_{clave}", icon=":material/do_not_disturb_on:"):
             return "descartar"
     return None

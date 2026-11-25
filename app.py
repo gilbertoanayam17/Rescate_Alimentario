@@ -10,9 +10,11 @@ from rescate.contenedor import construir_servicios
 from rescate.dominio.enums import Rol
 from ui import coordinador, donante, receptor, recolector
 from ui.comun import panel_avisos
+from ui.estilo import aplicar_estilo
 from ui.sesion import actor_de_sesion, barra_sesion, pantalla_entrada
 
-st.set_page_config(page_title="Rescate Alimentario", page_icon="🥖", layout="wide")
+st.set_page_config(page_title="Rescate Alimentario", page_icon=":material/volunteer_activism:", layout="wide")
+aplicar_estilo()
 
 
 @st.cache_resource
@@ -36,8 +38,7 @@ if actor is None:
     st.stop()
 
 with st.sidebar:
-    st.title("Rescate Alimentario")
-    st.caption("Del sobrante de la fonda al comedor comunitario")
+    st.title(":material/volunteer_activism: Rescate Alimentario")
     barra_sesion(servicios, actor)
     st.divider()
     panel_avisos(servicios, actor)

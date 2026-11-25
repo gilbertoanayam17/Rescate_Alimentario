@@ -177,13 +177,13 @@ Cada estado es una clase en `rescate/dominio/estados.py` con sus transiciones; u
 
 Cada agente anota sus pasos con `self._anotar(...)`; la bitácora los guarda en DuckDB en orden.
 
-| Tipo | Ícono | Ejemplo |
+| Tipo | Ícono (Material Symbols) | Ejemplo |
 | --- | --- | --- |
-| Pensamiento | 💭 | "ReAct 2: Reviso si Comedor Oblatos tiene espacio" |
-| Acción | 🛠️ | "ReAct 2: capacidad(com-oblatos)" |
-| Observación | 👀 | "Comedor Comunitario Oblatos: puede recibir 56 kg más hoy; el donativo pesa 4 kg." |
-| Resultado | ✅ | "apto_con_condiciones: …" |
-| Error | ⚠️ | "ReAct: … no supera a … en ningún criterio calculado; uso la selección entre los 3 mejores." |
+| Pensamiento | `psychology` | "ReAct 2: Reviso si Comedor Oblatos tiene espacio" |
+| Acción | `build` | "ReAct 2: capacidad(com-oblatos)" |
+| Observación | `visibility` | "Comedor Comunitario Oblatos: puede recibir 56 kg más hoy; el donativo pesa 4 kg." |
+| Resultado | `task_alt` | "apto_con_condiciones: …" |
+| Error | `error` | "ReAct: … no supera a … en ningún criterio calculado; uso la selección entre los 3 mejores." |
 
 El donante ve la bitácora de cada donativo en "¿Cómo lo decidieron los agentes?" y el coordinador la consulta completa, con filtros por agente y por donativo.
 

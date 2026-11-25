@@ -1,7 +1,5 @@
 # Documento de Visión y Alcances: Rescate Alimentario (versión 3, entrega final)
 
-*Del sobrante de la fonda al comedor comunitario, con agentes de IA que corren en local*
-
 Equivalente en Markdown de [Vision_y_Alcances_Rescate_Alimentario_v3.docx](Vision_y_Alcances_Rescate_Alimentario_v3.docx).
 
 | Dato | Valor |
@@ -29,18 +27,18 @@ Va dirigido a los jueces del hackathon, al profesor de la materia y al propio eq
 
 El producto del hackathon cubre el ciclo completo de un donativo: se publica, se evalúa, se asigna, se recolecta y se entrega, con avisos, rutas, pronósticos, constancias y tablero de impacto. La tabla indica el estado final de cada parte del alcance.
 
-**Dentro del alcance: estado final**
+**Dentro del alcance.** Todo quedó hecho en la entrega final:
 
-- **Hecho.** Publicación de excedentes en lenguaje natural, con preguntas de aclaración, y conversión a un donativo estructurado; el texto del usuario se trata como dato (defensa contra prompt injection).
-- **Hecho.** Evaluación de inocuidad y vida útil con reglas y RAG sobre la NOM-251; los dictámenes dudosos pasan al coordinador.
-- **Hecho.** Asignación del receptor por un agente con ciclo ReAct y herramientas, con reasignación automática si el receptor rechaza.
-- **Hecho.** Seguimiento del estado del donativo y avisos dentro de la app en cada cambio.
-- **Hecho.** Registro de donantes, receptores y recolectores, con inicio de sesión por PIN y aviso de privacidad.
-- **Hecho.** Bitácora de razonamiento y bandeja del coordinador para todos los casos escalados, con vencimiento de recolecciones.
-- **Hecho.** Tablero de impacto: kg, raciones equivalentes y emisiones evitadas por donante, receptor y periodo, con reporte ESG.
-- **Hecho.** Ruta sugerida de recolección con varias paradas y toma atómica de los donativos.
-- **Hecho.** Predicción de excedentes recurrentes con pre-reserva de receptor.
-- **Hecho.** Constancia de entrega en PDF.
+- Publicación de excedentes en lenguaje natural, con preguntas de aclaración, y conversión a un donativo estructurado; el texto del usuario se trata como dato (defensa contra prompt injection).
+- Evaluación de inocuidad y vida útil con reglas y RAG sobre la NOM-251; los dictámenes dudosos pasan al coordinador.
+- Asignación del receptor por un agente con ciclo ReAct y herramientas, con reasignación automática si el receptor rechaza.
+- Seguimiento del estado del donativo y avisos dentro de la app en cada cambio.
+- Registro de donantes, receptores y recolectores, con inicio de sesión por PIN y aviso de privacidad.
+- Bitácora de razonamiento y bandeja del coordinador para todos los casos escalados, con vencimiento de recolecciones.
+- Tablero de impacto: kg, raciones equivalentes y emisiones evitadas por donante, receptor y periodo, con reporte ESG.
+- Ruta sugerida de recolección con varias paradas y toma atómica de los donativos.
+- Predicción de excedentes recurrentes con pre-reserva de receptor.
+- Constancia de entrega en PDF.
 
 **Fuera del alcance (versiones futuras)**
 
@@ -56,16 +54,16 @@ El producto del hackathon cubre el ciclo completo de un donativo: se publica, se
 
 | Término | Definición | Término | Definición |
 | --- | --- | --- | --- |
-| **Agente** | Componente que usa un LLM para razonar, elegir herramientas y actuar en varios pasos hacia una meta. | **Donataria autorizada** | Organización autorizada por el SAT para recibir donativos deducibles. |
-| **LLM** | *Large Language Model*, modelo de lenguaje de gran escala. | **ODS** | Objetivos de Desarrollo Sostenible de la ONU. |
-| **Ollama** | Entorno para descargar y ejecutar LLM *open source* en la computadora local. | **MVP** | Producto mínimo viable. |
-| **ReAct** | Patrón *Reason + Act*: pensamiento, acción, observación, repetido hasta resolver. | **ESG** | Criterios ambientales, sociales y de gobernanza que reportan las empresas. |
-| **RAG** | *Retrieval-Augmented Generation*: el LLM responde apoyado en documentos recuperados. | **DuckDB** | Base de datos analítica embebida; memoria del sistema. |
-| **Donante** | Comercio que publica excedentes: fonda, panadería, puesto de mercado/central de abastos, restaurante. | **FAISS** | Biblioteca de búsqueda vectorial para el RAG. |
-| **Receptor** | Organización que recibe alimentos: comedor comunitario, albergue o banco de alimentos. | **LangGraph** | Biblioteca para orquestar flujos de agentes como grafos de estados. |
-| **Recolector** | Voluntario que traslada el donativo del donante al receptor. | **Streamlit** | Biblioteca de Python para construir la interfaz web. |
-| **Excedente** | Alimento apto para consumo humano que el comercio ya no venderá. | **MoSCoW** | Priorización en *Must, Should, Could, Won't*. |
-| **Donativo** | Excedente publicado en la plataforma, con su ciclo de vida y estado. | **Bitácora** | Registro del pensamiento, las acciones, las observaciones y los resultados de cada agente, para auditar sus decisiones. |
+| Agente | Componente que usa un LLM para razonar, elegir herramientas y actuar en varios pasos hacia una meta. | Donataria autorizada | Organización autorizada por el SAT para recibir donativos deducibles. |
+| LLM | *Large Language Model*, modelo de lenguaje de gran escala. | ODS | Objetivos de Desarrollo Sostenible de la ONU. |
+| Ollama | Entorno para descargar y ejecutar LLM *open source* en la computadora local. | MVP | Producto mínimo viable. |
+| ReAct | Patrón *Reason + Act*: pensamiento, acción, observación, repetido hasta resolver. | ESG | Criterios ambientales, sociales y de gobernanza que reportan las empresas. |
+| RAG | *Retrieval-Augmented Generation*: el LLM responde apoyado en documentos recuperados. | DuckDB | Base de datos analítica embebida; memoria del sistema. |
+| Donante | Comercio que publica excedentes: fonda, panadería, puesto de mercado/central de abastos, restaurante. | FAISS | Biblioteca de búsqueda vectorial para el RAG. |
+| Receptor | Organización que recibe alimentos: comedor comunitario, albergue o banco de alimentos. | LangGraph | Biblioteca para orquestar flujos de agentes como grafos de estados. |
+| Recolector | Voluntario que traslada el donativo del donante al receptor. | Streamlit | Biblioteca de Python para construir la interfaz web. |
+| Excedente | Alimento apto para consumo humano que el comercio ya no venderá. | MoSCoW | Priorización en *Must, Should, Could, Won't*. |
+| Donativo | Excedente publicado en la plataforma, con su ciclo de vida y estado. | Bitácora | Registro del pensamiento, las acciones, las observaciones y los resultados de cada agente, para auditar sus decisiones. |
 
 ### 1.4 Referencias
 
@@ -88,7 +86,7 @@ La sección 2 explica el problema y la posición del producto. La 3 describe a l
 
 ## 2. Posicionamiento
 
-México desperdicia alrededor de 20.4 millones de toneladas de comida al año, mientras el 14.4 % de su población tiene carencia por acceso a la alimentación. Rescate Alimentario ataca la “última milla” de ese desperdicio: el sobrante diario de los comercios pequeños, que hoy nadie recoge.
+México desperdicia alrededor de 20.4 millones de toneladas de comida al año, mientras el 14.4 % de su población tiene carencia por acceso a la alimentación. Rescate Alimentario se ocupa del sobrante diario de los comercios pequeños, que hoy casi nadie recoge.
 
 ### 2.1 Oportunidad de negocio
 
@@ -104,21 +102,21 @@ México desperdicia alrededor de 20.4 millones de toneladas de comida al año, m
 
 | | |
 | --- | --- |
-| **El problema de** | coordinar en minutos la donación de excedentes pequeños y perecederos |
-| **afecta a** | fondas, panaderías, puestos de mercado y restaurantes pequeños, y a los comedores comunitarios que los necesitan |
-| **cuyo impacto es** | comida apta que se tira cada noche, comedores con despensa insuficiente y emisiones evitables |
-| **una solución exitosa sería** | que el comercio describa su sobrante en una frase y, sin más esfuerzo, el alimento llegue a un comedor ese mismo día, con trazabilidad e impacto medido |
+| El problema de | coordinar en minutos la donación de excedentes pequeños y perecederos |
+| afecta a | fondas, panaderías, puestos de mercado y restaurantes pequeños, y a los comedores comunitarios que los necesitan |
+| cuyo impacto es | comida apta que se tira cada noche, comedores con despensa insuficiente y emisiones evitables |
+| una solución exitosa sería | que el comercio describa su sobrante en una frase y, sin más esfuerzo, el alimento llegue a un comedor ese mismo día, con trazabilidad e impacto medido |
 
 ### 2.3 Enunciado de posicionamiento del producto
 
 | | |
 | --- | --- |
-| **Para** | pequeños comercios de alimentos y comedores comunitarios |
-| **quienes** | tienen excedentes diarios o necesitan alimentos, pero no tiempo ni herramientas para coordinarse |
-| **Rescate Alimentario es** | una plataforma agéntica con LLM local |
-| **que** | entiende el sobrante descrito en lenguaje natural, verifica que sea apto, elige al receptor, propone la ruta y mide el impacto |
-| **a diferencia de** | Cheaf, que vende excedentes con descuento a consumidores; de los grupos de WhatsApp, sin trazabilidad; y de la logística de bancos de alimentos, pensada para grandes volúmenes |
-| **nuestro producto** | dona en lugar de vender, funciona con una frase y no requiere capacitación, aprende los patrones de cada comercio para anticipar excedentes y no envía datos a la nube |
+| Para | pequeños comercios de alimentos y comedores comunitarios |
+| quienes | tienen excedentes diarios o necesitan alimentos, pero no tiempo ni herramientas para coordinarse |
+| Rescate Alimentario es | una plataforma agéntica con LLM local |
+| que | entiende el sobrante descrito en lenguaje natural, verifica que sea apto, elige al receptor, propone la ruta y mide el impacto |
+| a diferencia de | Cheaf, que vende excedentes con descuento a consumidores; de los grupos de WhatsApp, sin trazabilidad; y de la logística de bancos de alimentos, pensada para grandes volúmenes |
+| nuestro producto | dona en lugar de vender, funciona con una frase y no requiere capacitación, aprende los patrones de cada comercio para anticipar excedentes y no envía datos a la nube |
 
 ## 3. Descripciones de la parte interesada y del usuario
 
@@ -135,22 +133,22 @@ El sistema tiene cuatro usuarios directos: donante, receptor, recolector y coord
 
 | Parte interesada (nombre) | Descripción (representaciones) | Responsabilidades (rol) |
 | --- | --- | --- |
-| **Comercios donantes** | Dueños o encargados de fondas, panaderías, puestos de mercado y restaurantes pequeños | Publicar excedentes, entregar el alimento en buen estado |
-| **Organizaciones receptoras** | Comedores comunitarios, albergues, casas hogar y bancos de alimentos | Declarar necesidades y horarios, recibir y distribuir |
-| **Voluntarios recolectores** | Personas con tiempo y medio de transporte | Recoger y entregar a tiempo, confirmar cada paso |
-| **Organización operadora** | ONG o banco de alimentos que administra la red local | Dar de alta participantes, supervisar, reportar impacto |
-| **Patrocinadores corporativos** | Cadenas, franquicias y empresas con metas ESG | Financiar la operación, recibir reportes de impacto y respaldo de donativos |
-| **Autoridades** | Salud estatal y gobiernos estatales y municipales | Normar la inocuidad, impulsar políticas contra el desperdicio |
-| **Profesor y jueces virtuales** | Cinco agentes evaluadores: Don Cliente, Don Objeto, Don Diseño, Don Usabilidad y Don Inversionista | Evaluar cada uno su criterio; el profesor puede probar la app en su MacBook |
+| Comercios donantes | Dueños o encargados de fondas, panaderías, puestos de mercado y restaurantes pequeños | Publicar excedentes, entregar el alimento en buen estado |
+| Organizaciones receptoras | Comedores comunitarios, albergues, casas hogar y bancos de alimentos | Declarar necesidades y horarios, recibir y distribuir |
+| Voluntarios recolectores | Personas con tiempo y medio de transporte | Recoger y entregar a tiempo, confirmar cada paso |
+| Organización operadora | ONG o banco de alimentos que administra la red local | Dar de alta participantes, supervisar, reportar impacto |
+| Patrocinadores corporativos | Cadenas, franquicias y empresas con metas ESG | Financiar la operación, recibir reportes de impacto y respaldo de donativos |
+| Autoridades | Salud estatal y gobiernos estatales y municipales | Normar la inocuidad, impulsar políticas contra el desperdicio |
+| Profesor y jueces virtuales | Cinco agentes evaluadores: Don Cliente, Don Objeto, Don Diseño, Don Usabilidad y Don Inversionista | Evaluar cada uno su criterio; el profesor puede probar la app en su MacBook |
 
 ### 3.3 Resumen de usuarios
 
 | Usuario | Descripción | Qué hace en el sistema | Parte interesada |
 | --- | --- | --- | --- |
-| **Donante** | Encargado del comercio | Describe su excedente en una frase, responde las aclaraciones y puede cancelar mientras nadie lo acepte | Comercios donantes |
-| **Receptor** | Responsable del comedor o albergue | Configura tipos aceptados, capacidad, refrigeración y horario; acepta o rechaza con motivo | Organizaciones receptoras |
-| **Recolector** | Voluntario | Toma un donativo aceptado, confirma la recolección y la entrega | Voluntarios |
-| **Coordinador** | Personal de la organización operadora | Administra participantes, atiende los casos sin receptor y consulta métricas, historial y bitácora | Organización operadora |
+| Donante | Encargado del comercio | Describe su excedente en una frase, responde las aclaraciones y puede cancelar mientras nadie lo acepte | Comercios donantes |
+| Receptor | Responsable del comedor o albergue | Configura tipos aceptados, capacidad, refrigeración y horario; acepta o rechaza con motivo | Organizaciones receptoras |
+| Recolector | Voluntario | Toma un donativo aceptado, confirma la recolección y la entrega | Voluntarios |
+| Coordinador | Personal de la organización operadora | Administra participantes, atiende los casos sin receptor y consulta métricas, historial y bitácora | Organización operadora |
 
 ### 3.4 Entorno de usuario
 
@@ -191,10 +189,10 @@ Personas ilustrativas para guiar el diseño.
 
 | Alternativa | Qué hace | Limitación frente a esta necesidad |
 | --- | --- | --- |
-| **Tirar el excedente (status quo)** | Nada | Desperdicio, emisiones y, desde 2024, contrario al art. 55 de la LGAAS |
+| Tirar el excedente (status quo) | Nada | Desperdicio, emisiones y, desde 2024, contrario al art. 55 de la LGAAS |
 | [Cheaf](https://expansion.mx/tecnologia/2020/09/28/esta-app-evita-que-los-restaurantes-tiren-comida) | Vende paquetes sorpresa de excedentes con descuento a consumidores; cobra comisión por pedido | Vende, no dona: no llega a quien no puede pagar |
-| **Donación directa a un banco de alimentos** | Recolección organizada de donativos | Pensada para volumen; poco práctica para pocos kilos perecederos al cierre |
-| **Grupos de WhatsApp o Facebook** | Avisos informales entre vecinos y organizaciones | Sin verificación de inocuidad, sin asignación, sin trazabilidad ni métricas |
+| Donación directa a un banco de alimentos | Recolección organizada de donativos | Pensada para volumen; poco práctica para pocos kilos perecederos al cierre |
+| Grupos de WhatsApp o Facebook | Avisos informales entre vecinos y organizaciones | Sin verificación de inocuidad, sin asignación, sin trazabilidad ni métricas |
 
 ## 4. Visión general del producto
 
@@ -210,11 +208,11 @@ El sistema no depende de otro producto ni de servicios de IA en la nube. Cada ag
 
 | Agente | Responsabilidad única | Técnica en la entrega final |
 | --- | --- | --- |
-| **Intérprete** | Convierte la frase del donante en un donativo estructurado: alimento, cantidad, unidad, tipo, hora de preparación y ventana de recolección. Si falta un dato, pregunta. | **Implementado.** Salida con esquema Pydantic y diálogo de aclaración (máximo 2 rondas). El texto del donante se limpia y va delimitado como dato; los intentos de manipulación se detectan y la conservación que diga el LLM se valida con detectar_conservacion(). |
-| **Inocuidad** | Dictamina si el alimento es apto, apto con condiciones o no apto, estima su vida útil y cita la regla que aplicó. | **Implementado.** Cadena de 7 reglas (CI-01 a CI-07); si pasan, RAG con FAISS sobre la NOM-251 y los criterios de donación, y el LLM puede endurecer el dictamen, nunca relajarlo. Solo se aceptan citas de fragmentos recuperados; los dictámenes dudosos abren un caso. |
-| **Asignador** | Elige al receptor con mejor compatibilidad de tipo de alimento, capacidad, horario, distancia y equidad, y explica por qué. Si nadie es compatible, escala al coordinador. | **Implementado.** Filtros duros y puntuación con 4 criterios (35, 25, 25 y 15 %). Ciclo ReAct de hasta 6 pasos: el LLM elige herramientas (compatibles, distancia, capacidad, horario, equidad, puntuar) y finaliza con un receptor validado; si falla, elige entre los 3 mejores y, al final, el de mayor puntaje. |
-| **Logístico** | Agrupa donativos cercanos en una ruta para el recolector y estima horarios. | **Implementado.** Dos estrategias de ruta (vecino más cercano y primero el más urgente) con distancia de Haversine, velocidad y capacidad por transporte; el LLM elige entre las rutas calculadas solo si difieren y ambas cumplen los límites, y explica la elección. |
-| **Predictor** | Detecta patrones por comercio, día y hora, avisa al donante y pre-reserva receptor. | **Implementado.** Detecta patrones por día de la semana en el historial (código), el LLM decide si avisar y redacta el mensaje validado; pre-reserva receptor con las mismas herramientas del Asignador. |
+| Intérprete | Convierte la frase del donante en un donativo estructurado: alimento, cantidad, unidad, tipo, hora de preparación y ventana de recolección. Si falta un dato, pregunta. | Implementado. Salida con esquema Pydantic y diálogo de aclaración (máximo 2 rondas). El texto del donante se limpia y va delimitado como dato; los intentos de manipulación se detectan y la conservación que diga el LLM se valida con detectar_conservacion(). |
+| Inocuidad | Dictamina si el alimento es apto, apto con condiciones o no apto, estima su vida útil y cita la regla que aplicó. | Implementado. Cadena de 7 reglas (CI-01 a CI-07); si pasan, RAG con FAISS sobre la NOM-251 y los criterios de donación, y el LLM puede endurecer el dictamen, nunca relajarlo. Solo se aceptan citas de fragmentos recuperados; los dictámenes dudosos abren un caso. |
+| Asignador | Elige al receptor con mejor compatibilidad de tipo de alimento, capacidad, horario, distancia y equidad, y explica por qué. Si nadie es compatible, escala al coordinador. | Implementado. Filtros duros y puntuación con 4 criterios (35, 25, 25 y 15 %). Ciclo ReAct de hasta 6 pasos: el LLM elige herramientas (compatibles, distancia, capacidad, horario, equidad, puntuar) y finaliza con un receptor validado; si falla, elige entre los 3 mejores y, al final, el de mayor puntaje. |
+| Logístico | Agrupa donativos cercanos en una ruta para el recolector y estima horarios. | Implementado. Dos estrategias de ruta (vecino más cercano y primero el más urgente) con distancia de Haversine, velocidad y capacidad por transporte; el LLM elige entre las rutas calculadas solo si difieren y ambas cumplen los límites, y explica la elección. |
+| Predictor | Detecta patrones por comercio, día y hora, avisa al donante y pre-reserva receptor. | Implementado. Detecta patrones por día de la semana en el historial (código), el LLM decide si avisar y redacta el mensaje validado; pre-reserva receptor con las mismas herramientas del Asignador. |
 
 Los dos componentes sin LLM de la visión también están implementados: el **Notificador** escucha el bus de eventos y avisa a cada participante cuando cambia el estado de un donativo, y la **Calculadora de impacto** convierte kg en raciones (WRAP, 420 g por ración) y emisiones evitadas (FAO, 2.06 kg CO2e por kg). Un mediador lleva los casos escalados a la bandeja del coordinador.
 
@@ -225,11 +223,11 @@ Los dos componentes sin LLM de la visión también están implementados: el **No
 | El donante publica con una frase, sin formularios | CAR-01 |
 | Solo se dona comida segura | CAR-02 |
 | Cada comedor recibe lo que puede usar, cuando puede recibirlo | CAR-03, CAR-09 |
-| El voluntario recorre menos y hace más | CAR-04 |
+| El voluntario recoge varios donativos en una sola ruta | CAR-04 |
 | Todos saben en qué va cada donativo | CAR-05, CAR-06 |
 | El comedor planea su menú con anticipación | CAR-07 |
 | La organización demuestra su impacto | CAR-08, CAR-12 |
-| Nadie depende a ciegas de la IA | CAR-10, CAR-11 |
+| Una persona revisa los casos dudosos y cada decisión de los agentes queda registrada | CAR-10, CAR-11 |
 
 ### 4.3 Suposiciones y dependencias
 
@@ -268,18 +266,18 @@ El producto tiene 12 características; cada una indica el patrón o principio de
 
 | ID | Característica | Descripción | Patrón o principio |
 | --- | --- | --- | --- |
-| **CAR-01** | Publicación en lenguaje natural | El donante escribe “me sobraron 15 bolillos y 3 kg de arroz”. El Agente Intérprete lo convierte en un donativo estructurado y pregunta lo que falte. | Salida validada con esquema Pydantic y reglas de respaldo. Se descartó el Factory: el tipo de alimento es un Enum |
-| **CAR-02** | Evaluación de inocuidad y vida útil | El Agente de Inocuidad dictamina apto, apto con condiciones o no apto, con la regla citada de la NOM-251 o de los criterios de donación. Lo no apto nunca llega a un receptor. | Chain of Responsibility (implementado): 7 reglas encadenadas |
-| **CAR-03** | Asignación inteligente de receptor | El Agente Asignador elige receptor según compatibilidad, capacidad, horario, distancia y equidad, y deja escrita su justificación. | Strategy (implementado): un criterio nuevo es una clase más (OCP) |
-| **CAR-04** | Ruta de recolección | El Agente Logístico agrupa donativos cercanos y propone el orden de paradas al recolector. | Strategy (implementado): EstrategiaRuta con dos estrategias intercambiables |
-| **CAR-05** | Ciclo de vida del donativo | Estados: publicado, evaluado, asignado, en recolección, entregado; o bien rechazado, expirado o cancelado. Solo se permiten transiciones válidas. | State (implementado) |
-| **CAR-06** | Notificaciones | Cada cambio de estado avisa a los participantes involucrados por el canal configurado (en la app). | Observer (implementado): BusEventos y NotificadorEstados; el canal de avisos es otra Strategy |
-| **CAR-07** | Predicción de excedentes | El Agente Predictor detecta patrones (“los martes sobra pan”), avisa al donante y pre-reserva receptor. | Repository sobre DuckDB (implementado) y herramienta determinista de patrones |
-| **CAR-08** | Tablero de impacto | Kg rescatados, raciones equivalentes y emisiones evitadas por donante, receptor y periodo. | Cálculo determinista separado del LLM (SRP, implementado) |
-| **CAR-09** | Registro y perfiles | Alta de donantes (ubicación, hora de cierre), receptores (tipos aceptados, capacidad, refrigeración, horario) y recolectores (zona, disponibilidad). | Repository y validación con Pydantic (implementado) |
-| **CAR-10** | Escalamiento humano | Cuando un agente no está seguro o no encuentra receptor, o un donativo vence o se rechaza varias veces, el caso pasa a una bandeja del coordinador, que reintenta, asigna a mano, cancela o lo resuelve con una nota. | Mediator (implementado): MediadorCasos abre, no duplica y resuelve los casos |
-| **CAR-11** | Bitácora de razonamiento | Cada decisión guarda el pensamiento, las herramientas usadas y el resultado, para auditar y depurar. | Registro de trazas en DuckDB (implementado) |
-| **CAR-12** | Constancia de entrega | Documento exportable con fecha, alimentos, kg, donante y receptor, como respaldo para reportes ESG y fiscales. | Template Method (implementado): GeneradorDocumento con constancia y reporte ESG |
+| CAR-01 | Publicación en lenguaje natural | El donante escribe “me sobraron 15 bolillos y 3 kg de arroz”. El Agente Intérprete lo convierte en un donativo estructurado y pregunta lo que falte. | Salida validada con esquema Pydantic y reglas de respaldo. Se descartó el Factory: el tipo de alimento es un Enum |
+| CAR-02 | Evaluación de inocuidad y vida útil | El Agente de Inocuidad dictamina apto, apto con condiciones o no apto, con la regla citada de la NOM-251 o de los criterios de donación. Lo no apto nunca llega a un receptor. | Chain of Responsibility (implementado): 7 reglas encadenadas |
+| CAR-03 | Asignación inteligente de receptor | El Agente Asignador elige receptor según compatibilidad, capacidad, horario, distancia y equidad, y deja escrita su justificación. | Strategy (implementado): un criterio nuevo es una clase más (OCP) |
+| CAR-04 | Ruta de recolección | El Agente Logístico agrupa donativos cercanos y propone el orden de paradas al recolector. | Strategy (implementado): EstrategiaRuta con dos estrategias intercambiables |
+| CAR-05 | Ciclo de vida del donativo | Estados: publicado, evaluado, asignado, en recolección, entregado; o bien rechazado, expirado o cancelado. Solo se permiten transiciones válidas. | State (implementado) |
+| CAR-06 | Notificaciones | Cada cambio de estado avisa a los participantes involucrados por el canal configurado (en la app). | Observer (implementado): BusEventos y NotificadorEstados; el canal de avisos es otra Strategy |
+| CAR-07 | Predicción de excedentes | El Agente Predictor detecta patrones (“los martes sobra pan”), avisa al donante y pre-reserva receptor. | Repository sobre DuckDB (implementado) y herramienta determinista de patrones |
+| CAR-08 | Tablero de impacto | Kg rescatados, raciones equivalentes y emisiones evitadas por donante, receptor y periodo. | Cálculo determinista separado del LLM (SRP, implementado) |
+| CAR-09 | Registro y perfiles | Alta de donantes (ubicación, hora de cierre), receptores (tipos aceptados, capacidad, refrigeración, horario) y recolectores (zona, disponibilidad). | Repository y validación con Pydantic (implementado) |
+| CAR-10 | Escalamiento humano | Cuando un agente no está seguro o no encuentra receptor, o un donativo vence o se rechaza varias veces, el caso pasa a una bandeja del coordinador, que reintenta, asigna a mano, cancela o lo resuelve con una nota. | Mediator (implementado): MediadorCasos abre, no duplica y resuelve los casos |
+| CAR-11 | Bitácora de razonamiento | Cada decisión guarda el pensamiento, las herramientas usadas y el resultado, para auditar y depurar. | Registro de trazas en DuckDB (implementado) |
+| CAR-12 | Constancia de entrega | Documento exportable con fecha, alimentos, kg, donante y receptor, como respaldo para reportes ESG y fiscales. | Template Method (implementado): GeneradorDocumento con constancia y reporte ESG |
 
 Todas las clases de agentes implementan una interfaz común `Agente` y dependen de una abstracción del LLM, no de Ollama directamente. Así se puede cambiar de modelo sin tocar la lógica (inversión de dependencias).
 
@@ -291,17 +289,17 @@ La restricción que más pesa es el tiempo: tras entregar este documento el 16 d
 
 | Tipo | Restricción | Consecuencia para el diseño |
 | --- | --- | --- |
-| **Tiempo** | Hackathon del 7 de octubre al 24 de noviembre de 2026; visión y alcances se entrega el 16 de octubre | Se prioriza con MoSCoW; las características *Could* se cortan primero |
-| **Equipo** | 2 integrantes (el máximo permitido es 3) | Arquitectura modular: cada integrante puede tomar agentes independientes |
-| **Tecnología** | LLM *open source* en local con Ollama; sin APIs de IA de pago | Ambas computadoras del equipo tienen 8 GB de VRAM; se definen tres perfiles de modelo (sección 9.2) |
-| **Tecnología** | Python, LangGraph, DuckDB, FAISS y Streamlit | Stack alineado con el tutorial y el antecedente Basta |
-| **Diseño** | Aplicar POO, SOLID y patrones de diseño vistos en clase; código según PEP 8 | Cada característica declara su patrón (sección 5) |
-| **Entregables** | Visión y alcances, 4 diagramas UML, código en GitHub y video con todos los casos de uso | Los casos de uso del video salen de las características *Must* y *Should* |
-| **Evaluación** | Cinco jueces virtuales revisan el proyecto y el profesor puede probar la app en su MacBook | El repositorio arranca con el perfil ligero y documenta los requisitos mínimos en el README |
-| **Legal** | El sistema orienta sobre inocuidad pero no certifica; la responsabilidad del alimento es del donante | El aviso aparece en la página del donante, al aceptar un donativo, en la constancia y en el README |
-| **Legal** | Datos personales de donantes y voluntarios sujetos a la LFPDPPP (DOF, 20 de marzo de 2025) | Datos mínimos, todo se guarda en local y el aviso de privacidad se muestra en la pantalla de entrada; el PIN se guarda con PBKDF2 |
-| **Legal** | No se da asesoría fiscal | La constancia de entrega es un respaldo, no un comprobante fiscal |
-| **Datos** | Sin comercios reales conectados durante el hackathon | El demo usa datos simulados con ubicaciones y frases realistas |
+| Tiempo | Hackathon del 7 de octubre al 24 de noviembre de 2026; visión y alcances se entrega el 16 de octubre | Se prioriza con MoSCoW; las características *Could* se cortan primero |
+| Equipo | 2 integrantes (el máximo permitido es 3) | Arquitectura modular: cada integrante puede tomar agentes independientes |
+| Tecnología | LLM *open source* en local con Ollama; sin APIs de IA de pago | Ambas computadoras del equipo tienen 8 GB de VRAM; se definen tres perfiles de modelo (sección 9.2) |
+| Tecnología | Python, LangGraph, DuckDB, FAISS y Streamlit | Stack alineado con el tutorial y el antecedente Basta |
+| Diseño | Aplicar POO, SOLID y patrones de diseño vistos en clase; código según PEP 8 | Cada característica declara su patrón (sección 5) |
+| Entregables | Visión y alcances, 4 diagramas UML, código en GitHub y video con todos los casos de uso | Los casos de uso del video salen de las características *Must* y *Should* |
+| Evaluación | Cinco jueces virtuales revisan el proyecto y el profesor puede probar la app en su MacBook | El repositorio arranca con el perfil ligero y documenta los requisitos mínimos en el README |
+| Legal | El sistema orienta sobre inocuidad pero no certifica; la responsabilidad del alimento es del donante | El aviso aparece en la página del donante, al aceptar un donativo, en la constancia y en el README |
+| Legal | Datos personales de donantes y voluntarios sujetos a la LFPDPPP (DOF, 20 de marzo de 2025) | Datos mínimos, todo se guarda en local y el aviso de privacidad se muestra en la pantalla de entrada; el PIN se guarda con PBKDF2 |
+| Legal | No se da asesoría fiscal | La constancia de entrega es un respaldo, no un comprobante fiscal |
+| Datos | Sin comercios reales conectados durante el hackathon | El demo usa datos simulados con ubicaciones y frases realistas |
 
 ## 7. Rangos de calidad
 
@@ -309,19 +307,19 @@ La inocuidad manda sobre todo lo demás: el sistema prefiere rechazar un aliment
 
 | Atributo | Métrica | Meta | Cómo se mide | Resultado final |
 | --- | --- | --- | --- | --- |
-| **Seguridad alimentaria** | Alimentos no aptos aprobados por error | 0 en el set de prueba | 30 casos no aptos escritos con base en la NOM-251 | Cumplida: 0 aprobados en 35 casos no aptos (51 casos en total) |
-| **Exactitud** | Campos correctos al estructurar una frase | ≥ 90 % | 50 frases de prueba con respuesta esperada, en cada perfil | Cumplida con gemma4:e4b: 405 de 405 campos (100 %) en 50 frases; con gemma4:26b, 404 de 405 (99.8 %). Además, 0 de 10 manipulaciones exitosas en frases adversariales |
-| **Usabilidad** | Tiempo para publicar un excedente | ≤ 60 s, sin capacitación previa | Prueba con 5 usuarios externos al equipo | Protocolo listo (docs/prueba_usabilidad.md); los resultados con 5 personas se registran ahí |
-| **Rendimiento** | Tiempo de la frase del donante a la asignación | ≤ 60 s | Cronómetro en 20 corridas por perfil (ligero y completo) | No cumplida (13 sobre 60 s) con gemma4:e4b en 20 corridas, en un equipo solo con CPU: media 124.55 s · p95 224.42 s · máx 237.34 s. Falta medir en un equipo con GPU (docs/rendimiento.md) |
-| **Confiabilidad** | Donativos perdidos si Ollama falla o responde mal | 0: se guarda el texto y se reintenta hasta 2 veces | Prueba con Ollama detenido y con respuestas inválidas | Cumplida en pruebas: el cliente reintenta 2 veces y, si falla, cada agente usa su respaldo determinista y lo anota en la bitácora |
-| **Confiabilidad** | Salidas del LLM validadas contra su esquema antes de usarse | 100 % | Pruebas unitarias | Cumplida: toda respuesta del LLM se valida con un esquema Pydantic antes de usarse |
-| **Explicabilidad** | Asignaciones con justificación legible y bitácora | 100 % | Revisión de la bitácora de razonamiento | Cumplida: cada asignación guarda su justificación con los datos calculados, y los cinco agentes anotan su bitácora (el Asignador, cada paso del ciclo ReAct) |
-| **Mantenibilidad** | Cobertura de pruebas en lógica determinista | ≥ 70 % | Reporte de cobertura; cálculos desarrollados con TDD | Cumplida: 96 % del código (370 pruebas); la lógica determinista, entre 96 y 100 % |
-| **Mantenibilidad** | Agregar un criterio de asignación o un tipo de alimento | Sin modificar clases existentes (OCP) | Demostración en el video | Cumplida en el diseño: un criterio nuevo es una clase de CriterioPuntuacion y una regla nueva, un eslabón de la cadena |
-| **Privacidad** | Datos enviados a servicios externos de IA | 0 | Revisión del código y del tráfico de red | Cumplida: LLM y embeddings corren en Ollama local; solo el mapa descarga teselas de internet |
-| **Rendimiento** | Tablero con un año de datos y recuperación del RAG | ≤ 3 s y ≤ 2 s | scripts/medir_rendimiento.py | Cumplida: tablero en 0.015 s con 446 entregas; RAG con p95 de 0.03 s |
-| **Concurrencia** | Publicaciones perdidas en el pico de cierre | 0 de 10 simultáneas | Prueba con 10 hilos | Cumplida: 10 guardadas de 10, sin ids repetidos |
-| **Seguridad** | Dos voluntarios con el mismo donativo; acceso sin PIN | 0 | Pruebas de concurrencia y de sesión | Cumplida: la toma es atómica y sin PIN guardado no se entra |
+| Seguridad alimentaria | Alimentos no aptos aprobados por error | 0 en el set de prueba | 30 casos no aptos escritos con base en la NOM-251 | Cumplida: 0 aprobados en 35 casos no aptos (51 casos en total) |
+| Exactitud | Campos correctos al estructurar una frase | ≥ 90 % | 50 frases de prueba con respuesta esperada, en cada perfil | Cumplida con gemma4:e4b: 405 de 405 campos (100 %) en 50 frases; con gemma4:26b, 404 de 405 (99.8 %). Además, 0 de 10 manipulaciones exitosas en frases adversariales |
+| Usabilidad | Tiempo para publicar un excedente | ≤ 60 s, sin capacitación previa | Prueba con 5 usuarios externos al equipo | Protocolo listo (docs/prueba_usabilidad.md); los resultados con 5 personas se registran ahí |
+| Rendimiento | Tiempo de la frase del donante a la asignación | ≤ 60 s | Cronómetro en 20 corridas por perfil (ligero y completo) | No cumplida (13 sobre 60 s) con gemma4:e4b en 20 corridas, en un equipo solo con CPU: media 124.55 s · p95 224.42 s · máx 237.34 s. Falta medir en un equipo con GPU (docs/rendimiento.md) |
+| Confiabilidad | Donativos perdidos si Ollama falla o responde mal | 0: se guarda el texto y se reintenta hasta 2 veces | Prueba con Ollama detenido y con respuestas inválidas | Cumplida en pruebas: el cliente reintenta 2 veces y, si falla, cada agente usa su respaldo determinista y lo anota en la bitácora |
+| Confiabilidad | Salidas del LLM validadas contra su esquema antes de usarse | 100 % | Pruebas unitarias | Cumplida: toda respuesta del LLM se valida con un esquema Pydantic antes de usarse |
+| Explicabilidad | Asignaciones con justificación legible y bitácora | 100 % | Revisión de la bitácora de razonamiento | Cumplida: cada asignación guarda su justificación con los datos calculados, y los cinco agentes anotan su bitácora (el Asignador, cada paso del ciclo ReAct) |
+| Mantenibilidad | Cobertura de pruebas en lógica determinista | ≥ 70 % | Reporte de cobertura; cálculos desarrollados con TDD | Cumplida: 96 % del código (376 pruebas); la lógica determinista, entre 96 y 100 % |
+| Mantenibilidad | Agregar un criterio de asignación o un tipo de alimento | Sin modificar clases existentes (OCP) | Demostración en el video | Cumplida en el diseño: un criterio nuevo es una clase de CriterioPuntuacion y una regla nueva, un eslabón de la cadena |
+| Privacidad | Datos enviados a servicios externos de IA | 0 | Revisión del código y del tráfico de red | Cumplida: LLM y embeddings corren en Ollama local; solo el mapa descarga teselas de internet |
+| Rendimiento | Tablero con un año de datos y recuperación del RAG | ≤ 3 s y ≤ 2 s | scripts/medir_rendimiento.py | Cumplida: tablero en 0.015 s con 446 entregas; RAG con p95 de 0.03 s |
+| Concurrencia | Publicaciones perdidas en el pico de cierre | 0 de 10 simultáneas | Prueba con 10 hilos | Cumplida: 10 guardadas de 10, sin ids repetidos |
+| Seguridad | Dos voluntarios con el mismo donativo; acceso sin PIN | 0 | Pruebas de concurrencia y de sesión | Cumplida: la toma es atómica y sin PIN guardado no se entra |
 
 > Estos rangos aterrizan los tres criterios de **Software Chido** vistos en clase: hace lo que el cliente necesita, cumple principios de diseño y es fácil de mantener, extender y reutilizar.
 
@@ -331,18 +329,18 @@ Primero se construyó el flujo mínimo de un donativo: registrar, publicar, eval
 
 | ID | Característica | Prioridad | Iteración | Estado final |
 | --- | --- | --- | --- | --- |
-| **CAR-09** | Registro y perfiles | **Must** | 1 | **Implementada** |
-| **CAR-01** | Publicación en lenguaje natural | **Must** | 1 | **Implementada** |
-| **CAR-05** | Ciclo de vida del donativo | **Must** | 1 | **Implementada** |
-| **CAR-02** | Evaluación de inocuidad y vida útil | **Must** | 2 | **Implementada** |
-| **CAR-03** | Asignación inteligente de receptor | **Must** | 2 | **Implementada** |
-| **CAR-06** | Notificaciones | **Should** | 2 | **Implementada** |
-| **CAR-04** | Ruta de recolección | **Should** | 3 | **Implementada** |
-| **CAR-08** | Tablero de impacto | **Should** | 3 | **Implementada** |
-| **CAR-10** | Escalamiento humano | **Should** | 3 | **Implementada** |
-| **CAR-11** | Bitácora de razonamiento | **Should** | 3 | **Implementada** |
-| **CAR-07** | Predicción de excedentes | **Could** | 3, si hay tiempo | **Implementada** |
-| **CAR-12** | Constancia de entrega | **Could** | 3, si hay tiempo | **Implementada** |
+| CAR-09 | Registro y perfiles | Must | 1 | Implementada |
+| CAR-01 | Publicación en lenguaje natural | Must | 1 | Implementada |
+| CAR-05 | Ciclo de vida del donativo | Must | 1 | Implementada |
+| CAR-02 | Evaluación de inocuidad y vida útil | Must | 2 | Implementada |
+| CAR-03 | Asignación inteligente de receptor | Must | 2 | Implementada |
+| CAR-06 | Notificaciones | Should | 2 | Implementada |
+| CAR-04 | Ruta de recolección | Should | 3 | Implementada |
+| CAR-08 | Tablero de impacto | Should | 3 | Implementada |
+| CAR-10 | Escalamiento humano | Should | 3 | Implementada |
+| CAR-11 | Bitácora de razonamiento | Should | 3 | Implementada |
+| CAR-07 | Predicción de excedentes | Could | 3, si hay tiempo | Implementada |
+| CAR-12 | Constancia de entrega | Could | 3, si hay tiempo | Implementada |
 
 Quedan fuera de esta versión (*Won't*): integración con WhatsApp, entrada por voz, app móvil nativa y emisión de comprobantes fiscales.
 
@@ -369,15 +367,15 @@ El equipo desarrolla y prueba en dos computadoras con Windows y 8 GB de VRAM, as
 
 | Equipo | Procesador | RAM | GPU | Perfiles que corre |
 | --- | --- | --- | --- | --- |
-| **Laptop del equipo (Windows)** | Ryzen 7 8845HS | 16 GB | RTX 4070 Laptop, 8 GB VRAM | Ligero; completo con poca holgura de memoria |
-| **PC del equipo (Windows)** | Ryzen 5 5600X | 32 GB DDR4 | RTX 3070, 8 GB VRAM | Ligero; el completo requiere memoria libre suficiente y no cargó al grabar el video |
-| **MacBook del equipo (mínimo recomendado)** | Apple Silicon | 16 GB de memoria unificada | Integrada | Ligero; con 8 GB, el mínimo |
+| Laptop del equipo (Windows) | Ryzen 7 8845HS | 16 GB | RTX 4070 Laptop, 8 GB VRAM | Ligero; completo con poca holgura de memoria |
+| PC del equipo (Windows) | Ryzen 5 5600X | 32 GB DDR4 | RTX 3070, 8 GB VRAM | Ligero; el completo requiere memoria libre suficiente y no cargó al grabar el video |
+| MacBook del equipo (mínimo recomendado) | Apple Silicon | 16 GB de memoria unificada | Integrada | Ligero; con 8 GB, el mínimo |
 
 | Perfil | Modelo | Descarga | Uso |
 | --- | --- | --- | --- |
-| **Ligero (por defecto)** | `gemma4:e4b` | 6.6 a 9.5 GB | Configuración del repositorio, desarrollo, evaluación del Intérprete y video de la entrega final |
-| **Completo** | `gemma4:26b`, MoE con 3.8B parámetros activos de 25.2B | 16 a 19 GB | Evaluación del Intérprete: 99.8 % en 50 frases y 0 de 10 manipulaciones; tarda más en cargar |
-| **Mínimo** | `gemma4:e2b` | 4.6 a 7.5 GB | Equipos con 8 GB de memoria |
+| Ligero (por defecto) | `gemma4:e4b` | 6.6 a 9.5 GB | Configuración del repositorio, desarrollo, evaluación del Intérprete y video de la entrega final |
+| Completo | `gemma4:26b`, MoE con 3.8B parámetros activos de 25.2B | 16 a 19 GB | Evaluación del Intérprete: 99.8 % en 50 frases y 0 de 10 manipulaciones; tarda más en cargar |
+| Mínimo | `gemma4:e2b` | 4.6 a 7.5 GB | Equipos con 8 GB de memoria |
 
 Tamaños y arquitectura según [Ollama](https://ollama.com/library/gemma4). Los tres perfiles son de la misma familia, así que los prompts y esquemas JSON no cambian entre ellos.
 
@@ -416,34 +414,34 @@ La entrega final, del 24 de noviembre de 2026, implementa las doce característi
 
 | Aspecto | MVP (versión 2) | Entrega final (versión 3) |
 | --- | --- | --- |
-| **Agentes** | Tres agentes del flujo mínimo | Cinco agentes: se agregan Logístico (rutas) y Predictor (pronósticos) |
-| **Asignador** | El LLM elige entre los 3 mejores, con validación y respaldo | Ciclo ReAct de hasta 6 pasos con herramientas; la selección entre los 3 mejores queda como respaldo |
-| **Servicios (observación SRP)** | ServicioDonativos hacía participantes, publicación, asignación y entregas | Se dividió en ServicioParticipantes, ServicioPublicacion y ServicioDistribucion, más reportes, avisos, casos y pronósticos; Servicios solo los agrupa |
-| **Autorización (observación de seguridad)** | El rol se elegía en la barra lateral y dos voluntarios podían tomar el mismo donativo | Cada servicio valida el Actor contra la base; la toma del donativo es atómica; inicio de sesión con PIN |
-| **Prompt injection (observación de seguridad)** | El texto del donante llegaba tal cual al LLM | Texto limpio y delimitado como dato, detección de intentos, validación con detectar_conservacion() y caso al coordinador; 0 de 10 ataques exitosos |
-| **Notificaciones, ruta, predicción, tablero y constancia** | Pospuestas; el coordinador veía métricas básicas | Implementadas (CAR-04, 06, 07, 08 y 12) |
-| **Pruebas de calidad** | 171 pruebas, 92 %; 20 frases | 370 pruebas, 96 %; 50 frases (100 %) y 10 adversariales (0 exitosas) |
+| Agentes | Tres agentes del flujo mínimo | Cinco agentes: se agregan Logístico (rutas) y Predictor (pronósticos) |
+| Asignador | El LLM elige entre los 3 mejores, con validación y respaldo | Ciclo ReAct de hasta 6 pasos con herramientas; la selección entre los 3 mejores queda como respaldo |
+| Servicios (observación SRP) | ServicioDonativos hacía participantes, publicación, asignación y entregas | Se dividió en ServicioParticipantes, ServicioPublicacion y ServicioDistribucion, más reportes, avisos, casos y pronósticos; Servicios solo los agrupa |
+| Autorización (observación de seguridad) | El rol se elegía en la barra lateral y dos voluntarios podían tomar el mismo donativo | Cada servicio valida el Actor contra la base; la toma del donativo es atómica; inicio de sesión con PIN |
+| Prompt injection (observación de seguridad) | El texto del donante llegaba tal cual al LLM | Texto limpio y delimitado como dato, detección de intentos, validación con detectar_conservacion() y caso al coordinador; 0 de 10 ataques exitosos |
+| Notificaciones, ruta, predicción, tablero y constancia | Pospuestas; el coordinador veía métricas básicas | Implementadas (CAR-04, 06, 07, 08 y 12) |
+| Pruebas de calidad | 171 pruebas, 92 %; 20 frases | 376 pruebas, 96 %; 50 frases (100 %) y 10 adversariales (0 exitosas) |
 
 ### 10.3 Patrones de diseño en el código
 
 | Patrón | Dónde | Para qué |
 | --- | --- | --- |
-| **State** | `rescate/dominio/estados.py` | Cada estado del donativo define sus transiciones válidas; una transición inválida lanza un error |
-| **SRP en servicios** | `rescate/servicios/` | Un servicio por responsabilidad; la interfaz solo usa Servicios y pasa el Actor |
-| **Chain of Responsibility** | `rescate/agentes/reglas_inocuidad.py` | Las 7 reglas de inocuidad se encadenan; agregar una regla es agregar un eslabón |
-| **Strategy** | `rescate/herramientas/puntuacion.py, rutas.py; CanalAvisos` | Criterios de puntuación, estrategias de ruta y canal de avisos intercambiables |
-| **Observer** | `rescate/servicios/eventos.py, notificaciones.py` | El ciclo de vida publica eventos; el notificador y el mediador reaccionan |
-| **Mediator** | `rescate/mediador.py` | Coordina agentes, coordinador y participantes para los casos escalados |
-| **Template Method** | `rescate/documentos/base.py` | Constancia y reporte ESG con los mismos pasos; un documento nuevo solo implementa su cuerpo |
-| **ReAct** | `rescate/agentes/asignador.py` | Pensamiento, acción con herramienta y observación, con validación al finalizar |
-| **Repository** | `rescate/persistencia/repositorios.py` | Interfaces para participantes, donativos, bitácora, avisos, casos y pronósticos; DuckDB queda detrás |
-| **Inversión de dependencias** | `rescate/llm/cliente.py` | Los agentes dependen de ClienteLLM; lo implementan el cliente de Ollama y el simulado |
-| **Orquestación por grafo** | `rescate/orquestador.py` | LangGraph encadena interpretar, evaluar y asignar con salidas condicionales |
-| **Raíz de composición** | `rescate/contenedor.py` | El único lugar donde se crean y conectan las piezas |
+| State | `rescate/dominio/estados.py` | Cada estado del donativo define sus transiciones válidas; una transición inválida lanza un error |
+| SRP en servicios | `rescate/servicios/` | Un servicio por responsabilidad; la interfaz solo usa Servicios y pasa el Actor |
+| Chain of Responsibility | `rescate/agentes/reglas_inocuidad.py` | Las 7 reglas de inocuidad se encadenan; agregar una regla es agregar un eslabón |
+| Strategy | `rescate/herramientas/puntuacion.py, rutas.py; CanalAvisos` | Criterios de puntuación, estrategias de ruta y canal de avisos intercambiables |
+| Observer | `rescate/servicios/eventos.py, notificaciones.py` | El ciclo de vida publica eventos; el notificador y el mediador reaccionan |
+| Mediator | `rescate/mediador.py` | Coordina agentes, coordinador y participantes para los casos escalados |
+| Template Method | `rescate/documentos/base.py` | Constancia y reporte ESG con los mismos pasos; un documento nuevo solo implementa su cuerpo |
+| ReAct | `rescate/agentes/asignador.py` | Pensamiento, acción con herramienta y observación, con validación al finalizar |
+| Repository | `rescate/persistencia/repositorios.py` | Interfaces para participantes, donativos, bitácora, avisos, casos y pronósticos; DuckDB queda detrás |
+| Inversión de dependencias | `rescate/llm/cliente.py` | Los agentes dependen de ClienteLLM; lo implementan el cliente de Ollama y el simulado |
+| Orquestación por grafo | `rescate/orquestador.py` | LangGraph encadena interpretar, evaluar y asignar con salidas condicionales |
+| Raíz de composición | `rescate/contenedor.py` | El único lugar donde se crean y conectan las piezas |
 
 ### 10.4 Verificación
 
-- **Pruebas automatizadas.** 370 pruebas con cliente simulado, incluidas las pantallas con AppTest de Streamlit; cobertura del 96 % e integración continua con GitHub Actions.
+- **Pruebas automatizadas.** 376 pruebas con cliente simulado, incluidas las pantallas con AppTest de Streamlit; cobertura del 96 % e integración continua con GitHub Actions.
 - **Inocuidad.** 51 casos: los 35 no aptos se rechazan y ninguno sale aprobado.
 - **Intérprete.** Con gemma4:e4b, 405 de 405 campos correctos en 50 frases (meta: 90 %) y 0 de 10 manipulaciones exitosas.
 - **Rendimiento.** Frase → asignación: media 124.55 s · p95 224.42 s · máx 237.34 s en un equipo solo con CPU (meta: 60 s; falta medir con GPU). Tablero con un año de datos en 0.015 s, RAG en 0.03 s (p95) y 10 publicaciones simultáneas sin pérdidas.

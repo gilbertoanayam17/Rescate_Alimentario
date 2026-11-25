@@ -2,11 +2,9 @@
 
 [![pruebas](https://github.com/gilbertoanayam17/Rescate_Alimentario/actions/workflows/pruebas.yml/badge.svg)](https://github.com/gilbertoanayam17/Rescate_Alimentario/actions/workflows/pruebas.yml)
 
-Del sobrante de la fonda al comedor comunitario, con agentes de IA que corren en local.
-
 Rescate Alimentario conecta a pequeños comercios de alimentos (fondas, panaderías, puestos de
 mercado) con comedores comunitarios. El donante describe su excedente en una frase y un equipo
-de cinco agentes con un LLM local lo interpreta, verifica que sea apto para donarse (NOM-251),
+de cinco agentes con un LLM que corre en local (Ollama) lo interpreta, verifica que sea apto para donarse (NOM-251),
 elige al receptor, propone la ruta al voluntario y anticipa los excedentes de mañana. Proyecto
 del Hackathon Agéntico 2026B de Diseño de Software (ITESO), alineado al ODS 2 (Hambre cero) y
 a la meta 12.3 del ODS 12.
@@ -55,7 +53,9 @@ Para probar sin modelo pon `USAR_LLM_FALSO=1` en `.env`: los agentes usan sus re
 **Inicio de sesión.** Elige tu rol y tu nombre y escribe tu PIN. Los participantes que carga
 `cargar_semilla.py` entran con `PIN_DEMO` (por omisión `1234`) y el coordinador con
 `PIN_COORDINADOR` (por omisión `0000`); los dos se cambian en `.env`. Un participante sin PIN no
-puede entrar: el coordinador se lo asigna en la pestaña Participantes.
+puede entrar: el coordinador se lo asigna en la pestaña Participantes. Nadie se registra solo; la
+pantalla de entrada muestra qué datos pedir para el alta y el contacto de `CORREO_COORDINACION` y
+`TELEFONO_COORDINACION`.
 
 Para usar Ollama, revisa `ollama list`, pon `USAR_LLM_FALSO=0` y, si hace falta, descarga los modelos:
 
@@ -80,7 +80,7 @@ usar la hora real.
 | CU-03 Evaluar inocuidad | Agente de Inocuidad | 7 reglas (CI-01 a CI-07), RAG sobre la NOM-251 y LLM que solo puede endurecer el dictamen; los dudosos van al coordinador |
 | CU-04 Asignar receptor | Agente Asignador | Filtros, puntuación con 4 criterios y ciclo ReAct de hasta 6 pasos con herramientas; respaldo a la selección entre los 3 mejores |
 | CU-05 Aceptar o rechazar | Receptor | Rechazo con motivo y reasignación automática sin repetir al que rechazó |
-| CU-06 Recibir avisos | Todos | Panel "🔔 Avisos" con cada cambio de estado que les toca |
+| CU-06 Recibir avisos | Todos | Panel "Avisos" con cada cambio de estado que les toca |
 | CU-07 Ruta y tomar donativos | Recolector | El Agente Logístico agrupa los donativos cercanos que caben en su transporte y ordena las paradas; la toma es atómica |
 | CU-08 Confirmar la entrega | Recolector | Solo el voluntario que lleva el donativo |
 | CU-09 Constancia de entrega | Donante, receptor, coordinador | PDF con folio, alimentos, kg, raciones, CO2e y dictamen |
@@ -139,9 +139,9 @@ Detalle, recorridos y decisiones: [docs/arquitectura.md](docs/arquitectura.md). 
 
 | Observación | Cómo se atendió | Pruebas |
 | --- | --- | --- |
-| **SRP:** `ServicioDonativos` hacía participantes, publicación, asignación y entregas | Se dividió en `ServicioParticipantes`, `ServicioPublicacion` y `ServicioDistribucion`, más servicios de reportes, avisos, casos y pronósticos; `Servicios` solo los agrupa | `tests/test_autorizacion.py` (ningún módulo usa `ServicioDonativos`) |
-| **Autorización:** el rol se elegía en la barra lateral y dos voluntarios podían tomar el mismo donativo | Cada servicio recibe el `Actor` y lo valida contra la base; la toma es atómica (`UPDATE … WHERE estado='asignado' AND recolector_id IS NULL`). Además, inicio de sesión con PIN: el rol ya no se elige | `tests/test_autorizacion.py` (rol falso, dos hilos con `Barrier`), `tests/test_sesion.py` |
-| **Prompt injection** en el Intérprete | El texto del usuario se limpia y se delimita como dato (`seguridad_prompt.py`); se detectan intentos, se valida la respuesta del LLM con `detectar_conservacion()`, y se abre un caso para el coordinador | `tests/test_seguridad_prompt.py`; 0 de 10 manipulaciones exitosas con `gemma4:e4b` |
+| SRP: `ServicioDonativos` hacía participantes, publicación, asignación y entregas | Se dividió en `ServicioParticipantes`, `ServicioPublicacion` y `ServicioDistribucion`, más servicios de reportes, avisos, casos y pronósticos; `Servicios` solo los agrupa | `tests/test_autorizacion.py` (ningún módulo usa `ServicioDonativos`) |
+| Autorización: el rol se elegía en la barra lateral y dos voluntarios podían tomar el mismo donativo | Cada servicio recibe el `Actor` y lo valida contra la base; la toma es atómica (`UPDATE … WHERE estado='asignado' AND recolector_id IS NULL`). Además, inicio de sesión con PIN: el rol ya no se elige | `tests/test_autorizacion.py` (rol falso, dos hilos con `Barrier`), `tests/test_sesion.py` |
+| Prompt injection en el Intérprete | El texto del usuario se limpia y se delimita como dato (`seguridad_prompt.py`); se detectan intentos, se valida la respuesta del LLM con `detectar_conservacion()`, y se abre un caso para el coordinador | `tests/test_seguridad_prompt.py`; 0 de 10 manipulaciones exitosas con `gemma4:e4b` |
 
 ## Verificación
 
@@ -154,7 +154,7 @@ python scripts/medir_rendimiento.py                   # metas de rendimiento →
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite con cliente simulado | 370 pruebas aprobadas, incluida `test_flujo_basico.py`; CI en GitHub Actions |
+| Suite con cliente simulado | 376 pruebas aprobadas, incluida `test_flujo_basico.py`; CI en GitHub Actions |
 | Cobertura (coverage.py) | 96 % de `rescate/`, `ui/` y `app.py` |
 | Intérprete con `gemma4:e4b` | 50 frases: 405 de 405 campos correctos (100 %; meta 90 %). Con `gemma4:26b`: 99.8 % |
 | Prompt injection | 10 frases adversariales: 0 manipulaciones exitosas con `gemma4:e4b` y con `gemma4:26b` |

@@ -38,9 +38,14 @@ AVISO_NO_CERTIFICA = (
 )
 
 EJEMPLOS = {
-    "🥖 Bolillos y jitomate": "Me sobraron 15 bolillos y 5 kg de jitomate",
-    "🍗 Pollo en mole": "Tengo 2 charolas de pollo en mole",
-    "🥛 Leche que quedó afuera": "Me quedaron 3 litros de leche que dejé afuera desde la mañana",
+    "Bolillos y jitomate": "Me sobraron 15 bolillos y 5 kg de jitomate",
+    "Pollo en mole": "Tengo 2 charolas de pollo en mole",
+    "Leche que quedó afuera": "Me quedaron 3 litros de leche que dejé afuera desde la mañana",
+}
+ICONO_EJEMPLO = {
+    "Bolillos y jitomate": ":material/bakery_dining:",
+    "Pollo en mole": ":material/restaurant:",
+    "Leche que quedó afuera": ":material/water_full:",
 }
 NOMBRE_TIPO = {
     TipoAlimento.PREPARADO: "Preparado",
@@ -65,7 +70,7 @@ def bitacora_en_orden(entradas: list[EntradaBitacora]) -> list[EntradaBitacora]:
 
 def mostrar(servicios: Servicios, actor: Actor | None) -> None:
     st.header("Publica lo que te sobró")
-    st.caption("Escríbelo como se lo dirías a un amigo. Nosotros nos encargamos del resto.")
+    st.caption("Escribe qué te sobró y cuánto, con tus palabras.")
     participante = servicios.participantes.obtener(actor.participante_id) if actor else None
     if participante is None:
         st.info("Elige un donante en la barra lateral.")
@@ -80,8 +85,8 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
 
     with st.chat_message("assistant"):
         st.markdown(
-            f"Hola, **{participante.nombre}**. Cuéntame qué te sobró hoy y cuánto; "
-            "si me falta algún dato, te pregunto."
+            f"Hola, **{participante.nombre}**. ¿Qué te sobró hoy y cuánto? "
+            "Si me falta un dato, te lo pregunto."
         )
     for mensaje in chat:
         with st.chat_message(mensaje["rol"]):
@@ -161,7 +166,9 @@ def _ejemplos_rapidos() -> str | None:
     st.caption("Ejemplos rápidos")
     columnas = st.columns(len(EJEMPLOS))
     for columna, (etiqueta, texto) in zip(columnas, EJEMPLOS.items()):
-        if columna.button(etiqueta, key=f"donante_ejemplo_{etiqueta}", width="stretch", help=texto):
+        if columna.button(
+            etiqueta, key=f"donante_ejemplo_{etiqueta}", width="stretch", help=texto, icon=ICONO_EJEMPLO[etiqueta]
+        ):
             return texto
     return None
 
@@ -242,7 +249,7 @@ def _resultado(servicios: Servicios, actor: Actor, donativo: Donativo, mensaje: 
         hide_index=True,
         width="stretch",
     )
-    st.caption(f"Total estimado: **{donativo.kg_totales:g} kg** (lo calcula el sistema, no el modelo)")
+    st.caption(f"Total estimado: **{donativo.kg_totales:g} kg** (calculado por el sistema)")
 
     if donativo.dictamen:
         d = donativo.dictamen
@@ -306,7 +313,7 @@ def _donativo(servicios: Servicios, actor: Actor, donativo: Donativo) -> None:
         historial_estados(servicios, actor, donativo.id)
     aceptado = bool(donativo.asignacion and donativo.asignacion.aceptada)
     puede_cancelar = donativo.estado in CANCELABLES and not aceptado  # la regla la valida el servicio
-    if puede_cancelar and st.button("Cancelar", key=f"donante_cancelar_{donativo.id}"):
+    if puede_cancelar and st.button("Cancelar", key=f"donante_cancelar_{donativo.id}", icon=":material/cancel:"):
         try:
             servicios.publicacion.cancelar(actor, donativo.id)
         except ErrorServicio as e:

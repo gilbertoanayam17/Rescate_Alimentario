@@ -32,6 +32,9 @@ class Servicios:
     casos: ServicioCasos
     prediccion: ServicioPrediccion
     estado_llm: Callable[[], str]
+    #: Contacto de la coordinación que ve quien todavía no tiene cuenta o PIN.
+    correo_coordinacion: str = ""
+    telefono_coordinacion: str = ""
 
 
 __all__ = [

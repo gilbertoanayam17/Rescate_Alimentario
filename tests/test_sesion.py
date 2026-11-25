@@ -222,6 +222,38 @@ def test_entrada_del_coordinador(servicios):
 def test_sin_participantes_del_rol(servicios):
     app = entrada(servicios)  # base vacía
     assert any("No hay participantes" in w.value for w in app.warning)
+    assert any("¿No tienes cuenta o olvidaste tu PIN?" in m.value for m in app.markdown)
+
+
+def test_la_entrada_explica_como_pedir_el_alta(servicios, con_pin):
+    from dataclasses import replace
+
+    from rescate.dominio.enums import Rol as R
+
+    servicios = replace(servicios, correo_coordinacion="alta@red.example", telefono_coordinacion="33 1234 5678")
+    app = entrada(servicios)
+    textos = " ".join(m.value for m in app.markdown)
+    assert "donante (comercio)" in textos and "hora de cierre" in textos
+    assert "mailto:alta@red.example?subject=Alta%20en%20Rescate%20Alimentario" in textos
+    assert "tel:3312345678" in textos
+    app.radio(key="sesion_rol").set_value(R.RECOLECTOR).run()
+    assert "transporte" in " ".join(m.value for m in app.markdown)
+    app.radio(key="sesion_rol").set_value(R.COORDINADOR).run()
+    assert not any("¿No tienes cuenta" in m.value for m in app.markdown)
+
+
+def test_sin_contacto_configurado_se_indica_a_quien_pedirlo(servicios, con_pin):
+    from dataclasses import replace
+
+    app = entrada(replace(servicios, correo_coordinacion="", telefono_coordinacion=""))
+    assert any("organización que opera la red" in m.value for m in app.markdown)
+
+
+def test_el_contacto_sale_de_la_configuracion(monkeypatch):
+    monkeypatch.setenv("CORREO_COORDINACION", " alta@red.example ")
+    monkeypatch.setenv("TELEFONO_COORDINACION", "33 1234 5678")
+    config = cargar_configuracion()
+    assert (config.correo_coordinacion, config.telefono_coordinacion) == ("alta@red.example", "33 1234 5678")
 
 
 def test_coordinador_asigna_pin_desde_la_pagina(aplicacion, servicios, donante):

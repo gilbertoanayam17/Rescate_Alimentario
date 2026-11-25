@@ -51,9 +51,9 @@ def pronostico_para(donante, receptor) -> Pronostico:
 def test_panel_de_avisos_muestra_y_marca_como_leido(servicios, actor_de, donante, receptores):
     servicios.publicacion.publicar(actor_de(donante), "20 bolillos")
     app = correr(servicios, actor_de(donante), PANEL)
-    assert app.expander[0].label == "🔔 Avisos (1)"
+    assert app.expander[0].label == "Avisos (1)"
     app.button[0].click().run()
-    assert app.expander[0].label == "🔔 Avisos (0)"
+    assert app.expander[0].label == "Avisos (0)"
     assert servicios.notificaciones.no_leidos(actor_de(donante)) == 0
 
 

@@ -79,7 +79,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
             tarjeta_donativo(servicios, actor, d)
             st.caption("El sistema orienta sobre inocuidad; no certifica el alimento.")
             try:
-                if st.button("Aceptar", key=f"receptor_aceptar_{d.id}"):
+                if st.button("Aceptar", key=f"receptor_aceptar_{d.id}", type="primary", icon=":material/check:"):
                     servicios.distribucion.aceptar(actor, d.id)
                     st.session_state.receptor_aviso = (
                         "Donativo aceptado. Ya aparece para los recolectores."
@@ -88,7 +88,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                 motivo = st.text_input(
                     "Motivo del rechazo", key=f"receptor_motivo_{d.id}"
                 )
-                if st.button("No podemos recibirlo", key=f"receptor_rechazar_{d.id}"):
+                if st.button("No podemos recibirlo", key=f"receptor_rechazar_{d.id}", icon=":material/close:"):
                     if not motivo.strip():
                         st.error("Escribe un motivo para la reasignación.")
                     else:
@@ -151,7 +151,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
             "Personas atendidas", min_value=0, value=participante.personas_atendidas
         )
         direccion = st.text_input("Dirección", participante.ubicacion.direccion)
-        if st.form_submit_button("Guardar perfil"):
+        if st.form_submit_button("Guardar perfil", type="primary", icon=":material/save:"):
             try:
                 servicios.participantes.registrar(
                     actor,
@@ -178,8 +178,8 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
 def posibles_donativos(servicios: Servicios, actor: Actor) -> None:
     """Pronósticos en los que este comedor quedó pre-reservado (CAR-07), sin acciones."""
     st.caption(
-        "Lo que probablemente te donen hoy, según el historial de los comercios. "
-        "Es un aviso: el donativo real llega cuando el comercio lo publica."
+        "Lo que probablemente te donen hoy, según lo que cada comercio ha donado otros días. "
+        "El donativo llega cuando el comercio lo publica."
     )
     pronosticos = servicios.prediccion.pronosticos_para_receptor(actor)
     if not pronosticos:
