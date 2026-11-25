@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import threading
 from abc import ABC, abstractmethod
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 import duckdb
 
@@ -298,7 +298,7 @@ class DonativosDuckDB(_BaseDuckDB, RepositorioDonativos):
                 nuevo.value,
                 evento.value if isinstance(evento, Evento) else evento,
                 motivo,
-                datetime.now(),
+                ahora(),
             ],
         )
 

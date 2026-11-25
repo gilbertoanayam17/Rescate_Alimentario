@@ -67,6 +67,10 @@ ollama run gemma4:e4b "hola"    # calienta el modelo antes de la primera publica
 
 Reinicia Streamlit después de cambiar `.env`: los servicios se conservan en caché.
 
+Para grabar o presentar a otra hora, pon `HORA_DEMO=16:00` (formato HH:MM) en `.env`: el reloj de la
+app, de los scripts y de los PDF corre desde esa hora de hoy sin cambiar el de la PC. Déjalo vacío para
+usar la hora real.
+
 ## Funcionalidad por caso de uso
 
 | Caso de uso | Quién | Qué hace |

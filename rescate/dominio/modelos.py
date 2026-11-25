@@ -5,7 +5,7 @@ renombrar o quitar campos rompe el trabajo del otro integrante.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 from typing import Literal, Union
 from uuid import uuid4
 
@@ -23,10 +23,30 @@ from .enums import (
     TipoEntradaBitacora,
 )
 
+#: Desfase de la hora de demo (HORA_DEMO): el reloj corre desde esa hora de hoy.
+_desfase = timedelta(0)
+_hora_demo: str | None = None
+
+
+def fijar_hora_demo(hhmm: str | None) -> None:
+    """Hace que `ahora()` corra desde la hora "HH:MM" de hoy, avanzando normal, sin tocar el reloj
+    de la PC (para grabar la demo de noche con datos de la tarde). None o "" regresa a la hora real.
+    Llamarla otra vez con la misma hora no reinicia el reloj."""
+    global _desfase, _hora_demo
+    hhmm = (hhmm or "").strip() or None
+    if hhmm == _hora_demo:
+        return
+    if hhmm is None:
+        _desfase = timedelta(0)
+    else:
+        real = datetime.now()
+        _desfase = datetime.combine(real.date(), time.fromisoformat(hhmm)) - real
+    _hora_demo = hhmm
+
 
 def ahora() -> datetime:
-    """Hora local sin microsegundos (el MVP corre en una sola zona horaria)."""
-    return datetime.now().replace(microsecond=0)
+    """Hora local sin microsegundos (el MVP corre en una sola zona horaria). Con HORA_DEMO, la de la demo."""
+    return (datetime.now() + _desfase).replace(microsecond=0)
 
 
 def nuevo_id() -> str:
