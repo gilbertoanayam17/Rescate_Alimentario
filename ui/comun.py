@@ -29,23 +29,40 @@ ETIQUETA_DICTAMEN = {
     Dictamen.NO_APTO: ("No apto", "red"),
 }
 
+#: Ícono de cada estado y dictamen: el significado no depende solo del color.
+ICONO_ESTADO = {
+    EstadoDonativo.PUBLICADO: ":material/edit_note:",
+    EstadoDonativo.EVALUADO: ":material/fact_check:",
+    EstadoDonativo.ASIGNADO: ":material/assignment_ind:",
+    EstadoDonativo.EN_RECOLECCION: ":material/local_shipping:",
+    EstadoDonativo.ENTREGADO: ":material/check_circle:",
+    EstadoDonativo.RECHAZADO: ":material/block:",
+    EstadoDonativo.EXPIRADO: ":material/schedule:",
+    EstadoDonativo.CANCELADO: ":material/cancel:",
+}
+ICONO_DICTAMEN = {
+    Dictamen.APTO: ":material/verified:",
+    Dictamen.APTO_CON_CONDICIONES: ":material/warning:",
+    Dictamen.NO_APTO: ":material/dangerous:",
+}
+
 ICONO_BITACORA = {
-    TipoEntradaBitacora.PENSAMIENTO: "💭",
-    TipoEntradaBitacora.ACCION: "🛠️",
-    TipoEntradaBitacora.OBSERVACION: "👀",
-    TipoEntradaBitacora.RESULTADO: "✅",
-    TipoEntradaBitacora.ERROR: "⚠️",
+    TipoEntradaBitacora.PENSAMIENTO: ":material/psychology:",
+    TipoEntradaBitacora.ACCION: ":material/build:",
+    TipoEntradaBitacora.OBSERVACION: ":material/visibility:",
+    TipoEntradaBitacora.RESULTADO: ":material/task_alt:",
+    TipoEntradaBitacora.ERROR: ":material/error:",
 }
 
 
 def insignia_estado(estado: EstadoDonativo) -> str:
     texto, color = ETIQUETA_ESTADO[estado]
-    return f":{color}[**● {texto}**]"
+    return f":{color}-badge[{ICONO_ESTADO[estado]} {texto}]"
 
 
 def insignia_dictamen(dictamen: Dictamen) -> str:
     texto, color = ETIQUETA_DICTAMEN[dictamen]
-    return f":{color}[**{texto}**]"
+    return f":{color}-badge[{ICONO_DICTAMEN[dictamen]} {texto}]"
 
 
 def tarjeta_donativo(
@@ -83,7 +100,7 @@ def vista_bitacora(entradas: list[EntradaBitacora]) -> None:
         st.caption("Sin entradas en la bitácora.")
         return
     for e in entradas:
-        icono = ICONO_BITACORA.get(e.tipo, "•")
+        icono = ICONO_BITACORA.get(e.tipo, ":material/circle:")
         st.markdown(f"{icono} **{e.agente}** · _{e.tipo.value}_ — {e.contenido}")
 
 
@@ -103,11 +120,11 @@ def panel_avisos(servicios: Servicios, actor: Actor | None) -> None:
         return
     avisos.sort(key=lambda a: (a.leido, -a.fecha.timestamp()))
     pendientes = sum(not a.leido for a in avisos)
-    with st.expander(f"🔔 Avisos ({pendientes})", expanded=pendientes > 0):
+    with st.expander(f"Avisos ({pendientes})", expanded=pendientes > 0, icon=":material/notifications:"):
         if not avisos:
             st.caption("Sin avisos por ahora.")
         for aviso in avisos:
-            marca = "" if aviso.leido else "🔵 "
+            marca = "" if aviso.leido else ":blue-badge[Nuevo] "
             st.markdown(f"{marca}**{aviso.titulo}** · {aviso.fecha:%d/%m %H:%M}")
             st.caption(aviso.mensaje)
             if not aviso.leido and st.button(

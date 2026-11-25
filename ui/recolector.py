@@ -71,6 +71,8 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
             if st.button(
                 "Voy por él",
                 key=f"recolector_recoger_{d.id}",
+                type="primary",
+                icon=":material/local_shipping:",
                 disabled=vencido or not participante.disponible,
             ):
                 try:
@@ -88,7 +90,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
             tarjeta_donativo(servicios, actor, d, mostrar_bitacora=False)
             for condicion in d.dictamen.condiciones if d.dictamen else []:
                 st.warning(condicion)
-            if st.button("Entregado", key=f"recolector_entregar_{d.id}"):
+            if st.button("Entregado", key=f"recolector_entregar_{d.id}", type="primary", icon=":material/task_alt:"):
                 try:
                     servicios.distribucion.confirmar_entrega(actor, d.id)
                     st.session_state.recolector_aviso = "Entrega registrada."
@@ -111,7 +113,7 @@ def mi_ruta(servicios: Servicios, actor: Actor, recolector: Recolector) -> None:
         "El Agente Logístico junta lo que ya llevas con los donativos cercanos que te caben "
         "y propone el orden de las paradas."
     )
-    if st.button("Calcular ruta sugerida", key="recolector_calcular_ruta"):
+    if st.button("Calcular ruta sugerida", key="recolector_calcular_ruta", icon=":material/route:"):
         st.session_state.recolector_ruta = servicios.distribucion.ruta_sugerida(actor) or "vacia"
     ruta = st.session_state.get("recolector_ruta")
     if ruta is None:
@@ -147,7 +149,7 @@ def mi_ruta(servicios: Servicios, actor: Actor, recolector: Recolector) -> None:
     mapa_ruta(recolector, ruta)
     st.caption("Distancias en línea recta; no es una ruta vial.")
     if ruta.por_tomar and st.button(
-        "Tomar estos donativos", key="recolector_tomar_ruta", type="primary"
+        "Tomar estos donativos", key="recolector_tomar_ruta", type="primary", icon=":material/playlist_add_check:"
     ):
         try:
             perdidos = servicios.distribucion.tomar_ruta(actor, ruta.por_tomar)

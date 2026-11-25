@@ -156,7 +156,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
             pin = st.text_input(
                 "PIN de acceso (4 a 8 dígitos)", type="password", max_chars=8
             )
-            if st.form_submit_button("Registrar participante"):
+            if st.form_submit_button("Registrar participante", type="primary", icon=":material/person_add:"):
                 try:
                     if not pin.strip():
                         raise ErrorServicio("Escribe el PIN con el que entrará.")
@@ -204,6 +204,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
                 "Eliminar participante",
                 disabled=not confirmar or vinculado,
                 key="coordinador_eliminar",
+                icon=":material/delete:",
             ):
                 try:
                     servicios.participantes.eliminar(actor, elegido.id)
@@ -237,7 +238,7 @@ def mostrar(servicios: Servicios, actor: Actor | None) -> None:
 def pronosticos_del_dia(servicios: Servicios, actor: Actor) -> None:
     """Genera y muestra los pronósticos de hoy de todos los donantes (CAR-07)."""
     hoy = ahora().date()
-    if st.button("Generar pronósticos de hoy", key="coordinador_generar_pronosticos"):
+    if st.button("Generar pronósticos de hoy", key="coordinador_generar_pronosticos", icon=":material/insights:"):
         try:
             st.session_state.coordinador_pronosticos = servicios.prediccion.generar(
                 actor, hoy
@@ -296,7 +297,7 @@ def acciones_donativo(servicios: Servicios, actor: Actor, donativo) -> None:
     """Reintentar, asignar a mano o cancelar el donativo de un caso."""
     try:
         if donativo.estado == E.EVALUADO:
-            if st.button("Reintentar asignación", key=f"coordinador_reintentar_{donativo.id}"):
+            if st.button("Reintentar asignación", key=f"coordinador_reintentar_{donativo.id}", icon=":material/refresh:"):
                 servicios.distribucion.reintentar_asignacion(actor, donativo.id)
                 st.session_state.coordinador_aviso = "Asignación reevaluada."
                 st.rerun()
@@ -312,7 +313,7 @@ def acciones_donativo(servicios: Servicios, actor: Actor, donativo) -> None:
                     "Motivo de la asignación manual",
                     key=f"coordinador_manual_motivo_{donativo.id}",
                 )
-                if st.button("Asignar", key=f"coordinador_manual_{donativo.id}"):
+                if st.button("Asignar", key=f"coordinador_manual_{donativo.id}", icon=":material/assignment_ind:"):
                     servicios.distribucion.asignar_manual(
                         actor, donativo.id, receptor.id, motivo
                     )
@@ -321,7 +322,7 @@ def acciones_donativo(servicios: Servicios, actor: Actor, donativo) -> None:
             else:
                 st.caption("Ningún receptor registrado es compatible con este donativo.")
         if donativo.estado in ACTIVOS and st.button(
-            "Cancelar donativo", key=f"coordinador_cancelar_{donativo.id}"
+            "Cancelar donativo", key=f"coordinador_cancelar_{donativo.id}", icon=":material/cancel:"
         ):
             servicios.publicacion.cancelar(
                 actor, donativo.id, "Cancelado por la coordinación"
@@ -334,7 +335,7 @@ def acciones_donativo(servicios: Servicios, actor: Actor, donativo) -> None:
 
 def resolver_caso(servicios: Servicios, actor: Actor, caso_id: str) -> None:
     nota = st.text_input("Nota de resolución", key=f"coordinador_nota_{caso_id}")
-    if st.button("Marcar como resuelto", key=f"coordinador_resolver_{caso_id}"):
+    if st.button("Marcar como resuelto", key=f"coordinador_resolver_{caso_id}", type="primary", icon=":material/task_alt:"):
         try:
             servicios.casos.resolver(actor, caso_id, nota)
             st.session_state.coordinador_aviso = "Caso resuelto."
@@ -435,7 +436,7 @@ def asignar_pin(servicios: Servicios, actor: Actor, personas: list) -> None:
             "PIN nuevo (4 a 8 dígitos)", type="password", max_chars=8,
             key="coordinador_pin_nuevo",
         )
-        if st.form_submit_button("Asignar PIN"):
+        if st.form_submit_button("Asignar PIN", icon=":material/key:"):
             try:
                 servicios.participantes.registrar(actor, elegido, pin=pin)
                 st.session_state.coordinador_aviso = f"PIN asignado a {elegido.nombre}."

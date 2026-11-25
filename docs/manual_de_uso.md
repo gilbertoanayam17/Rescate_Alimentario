@@ -23,18 +23,19 @@ python -m streamlit run app.py                      # http://localhost:8501
 2. Escribe tu PIN y pulsa *Entrar*. En la demo, todos los participantes usan `PIN_DEMO` (por omisión `1234`) y el coordinador `PIN_COORDINADOR` (por omisión `0000`).
 3. Con 5 PIN incorrectos en 5 minutos, ese participante queda bloqueado 1 minuto.
 4. Si aparece "Este participante no tiene PIN; pídelo al coordinador", el coordinador se lo asigna en *Participantes → PIN de acceso*.
-5. El expander *Aviso de privacidad* explica qué datos se guardan y para qué ([aviso_privacidad.md](aviso_privacidad.md)).
+5. Nadie se registra solo: la coordinación da de alta a cada participante y le asigna su PIN. Debajo del PIN, la pantalla de entrada dice qué datos mandar según el rol elegido y muestra el correo y el teléfono de la coordinación (`CORREO_COORDINACION` y `TELEFONO_COORDINACION` en `.env`).
+6. El expander *Aviso de privacidad* explica qué datos se guardan y para qué ([aviso_privacidad.md](aviso_privacidad.md)).
 
-Ya dentro, la barra lateral muestra *Sesión: Nombre (rol)*, el botón *Cerrar sesión* y el panel de avisos. No hay forma de ver una página sin PIN, y el rol sale del participante: no se elige.
+Ya dentro, la barra lateral muestra *Sesión: Nombre (rol)*, el botón *Cerrar sesión* y el panel de avisos. Todas las páginas piden PIN, y el rol lo define el participante con el que entras.
 
 ## Avisos
 
-El panel *🔔 Avisos (n)* de la barra lateral muestra los avisos de cada quien, los no leídos arriba con un punto azul, y el botón *Marcar como leído*. Llegan solos en cada cambio de estado: al donante cuando se asigna, se acepta, va en camino o se entrega su donativo; al receptor cuando le asignan uno; a los recolectores disponibles cuando hay algo listo para recoger; a la coordinación cuando se abre un caso. También llegan los avisos de pronóstico.
+El panel *Avisos (n)* de la barra lateral muestra los avisos de cada quien, los no leídos arriba con la etiqueta *Nuevo*, y el botón *Marcar como leído*. Llegan solos en cada cambio de estado: al donante cuando se asigna, se acepta, va en camino o se entrega su donativo; al receptor cuando le asignan uno; a los recolectores disponibles cuando hay algo listo para recoger; a la coordinación cuando se abre un caso. También llegan los avisos de pronóstico.
 
 ## Donante: publicar lo que sobró
 
-1. **Pronóstico del día.** Si tu comercio suele donar ese día de la semana, arriba del chat aparece la tarjeta 🔮 con lo que probablemente te sobre y el comedor pre-reservado. *Publicar ahora* manda una frase al chat; *Hoy no* la descarta.
-2. Escribe en el chat lo que te sobró, como se lo dirías a alguien: "Me sobraron 15 bolillos y 5 kg de jitomate". Los botones de *Ejemplos rápidos* mandan frases de prueba.
+1. **Pronóstico del día.** Si tu comercio suele donar ese día de la semana, arriba del chat aparece la tarjeta *Pronóstico para hoy* con lo que probablemente te sobre y el comedor pre-reservado. *Publicar ahora* manda una frase al chat; *Hoy no* la descarta.
+2. Escribe en el chat lo que te sobró, con tus palabras: "Me sobraron 15 bolillos y 5 kg de jitomate". Los botones de *Ejemplos rápidos* mandan frases de prueba.
 3. Si falta un dato importante (hora de preparación o cómo se ha guardado un guisado), el asistente pregunta. Responde en el mismo chat. *Empezar de nuevo* descarta lo pendiente.
 4. Al completarse ves los alimentos con los kilos estimados, el dictamen de inocuidad con sus condiciones y fundamento, y el receptor asignado con su justificación. *¿Cómo lo decidieron los agentes?* abre la bitácora.
 5. **Mi impacto** (arriba de *Mis donativos*): kg entregados, raciones equivalentes y CO2e evitado en los últimos 12 meses.

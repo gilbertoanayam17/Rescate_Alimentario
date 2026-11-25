@@ -1,0 +1,40 @@
+# Sin botón "Deploy" ni opciones de desarrollador en la barra de arriba.
+[client]
+toolbarMode = "minimal"
+
+# Tema visual de la app. Paleta "naranja apetitoso + azul de confianza" (comida y donación), con
+# el naranja oscurecido para que el texto blanco de los botones cumpla contraste AA (5.2:1).
+# Tipografía: Outfit en títulos y Work Sans en el texto; sin internet se usa la sans-serif del sistema.
+
+[theme]
+font = "'Work Sans':https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap, sans-serif"
+headingFont = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap, sans-serif"
+headingFontWeights = [700, 600, 600]
+baseRadius = "0.6rem"
+buttonRadius = "0.5rem"
+showWidgetBorder = true
+chartCategoricalColors = ["#C2410C", "#1D4ED8", "#047857", "#7C3AED", "#B45309", "#0E7490"]
+
+[theme.light]
+primaryColor = "#C2410C"
+backgroundColor = "#FFFBF5"
+secondaryBackgroundColor = "#FFEDD5"
+textColor = "#0F172A"
+linkColor = "#1D4ED8"
+borderColor = "#B8977F"
+
+[theme.light.sidebar]
+backgroundColor = "#FFF3E6"
+secondaryBackgroundColor = "#FFFFFF"
+
+[theme.dark]
+primaryColor = "#C2410C"
+backgroundColor = "#0F172A"
+secondaryBackgroundColor = "#1E293B"
+textColor = "#F8FAFC"
+linkColor = "#93C5FD"
+borderColor = "#64748B"
+
+[theme.dark.sidebar]
+backgroundColor = "#111C33"
+secondaryBackgroundColor = "#1E293B"
