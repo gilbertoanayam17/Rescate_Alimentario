@@ -76,7 +76,7 @@ El producto del hackathon cubre el ciclo completo de un donativo: se publica, se
 - Robert C. Martin y Micah Martin, *Agile Principles, Patterns**, and Practices* (SOLID).
 - Rod Stephens, *Beginning Software Engineering* (modelos de desarrollo).
 - Repositorio del proyecto: https://github.com/gilbertoanayam17/Rescate_Alimentario.
-- Video demo del MVP (segunda entrega): https://youtu.be/A0HnOscPrOA. Video de la entrega final: se agrega la liga al publicarlo.
+- Video demo del MVP (segunda entrega): https://youtu.be/A0HnOscPrOA. Video de la entrega final: https://youtu.be/ojkWn2vijvk.
 
 Las fuentes de datos citadas están al final del documento.
 
