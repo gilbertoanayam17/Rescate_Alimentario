@@ -314,7 +314,7 @@ La inocuidad manda sobre todo lo demás: el sistema prefiere rechazar un aliment
 | Confiabilidad | Donativos perdidos si Ollama falla o responde mal | 0: se guarda el texto y se reintenta hasta 2 veces | Prueba con Ollama detenido y con respuestas inválidas | Cumplida en pruebas: el cliente reintenta 2 veces y, si falla, cada agente usa su respaldo determinista y lo anota en la bitácora |
 | Confiabilidad | Salidas del LLM validadas contra su esquema antes de usarse | 100 % | Pruebas unitarias | Cumplida: toda respuesta del LLM se valida con un esquema Pydantic antes de usarse |
 | Explicabilidad | Asignaciones con justificación legible y bitácora | 100 % | Revisión de la bitácora de razonamiento | Cumplida: cada asignación guarda su justificación con los datos calculados, y los cinco agentes anotan su bitácora (el Asignador, cada paso del ciclo ReAct) |
-| Mantenibilidad | Cobertura de pruebas en lógica determinista | ≥ 70 % | Reporte de cobertura; cálculos desarrollados con TDD | Cumplida: 96 % del código (376 pruebas); la lógica determinista, entre 96 y 100 % |
+| Mantenibilidad | Cobertura de pruebas en lógica determinista | ≥ 70 % | Reporte de cobertura; cálculos desarrollados con TDD | Cumplida: 96 % del código (379 pruebas); la lógica determinista, entre 96 y 100 % |
 | Mantenibilidad | Agregar un criterio de asignación o un tipo de alimento | Sin modificar clases existentes (OCP) | Demostración en el video | Cumplida en el diseño: un criterio nuevo es una clase de CriterioPuntuacion y una regla nueva, un eslabón de la cadena |
 | Privacidad | Datos enviados a servicios externos de IA | 0 | Revisión del código y del tráfico de red | Cumplida: LLM y embeddings corren en Ollama local; solo el mapa descarga teselas de internet |
 | Rendimiento | Tablero con un año de datos y recuperación del RAG | ≤ 3 s y ≤ 2 s | scripts/medir_rendimiento.py | Cumplida: tablero en 0.015 s con 446 entregas; RAG con p95 de 0.03 s |
@@ -420,7 +420,7 @@ La entrega final, del 24 de noviembre de 2026, implementa las doce característi
 | Autorización (observación de seguridad) | El rol se elegía en la barra lateral y dos voluntarios podían tomar el mismo donativo | Cada servicio valida el Actor contra la base; la toma del donativo es atómica; inicio de sesión con PIN |
 | Prompt injection (observación de seguridad) | El texto del donante llegaba tal cual al LLM | Texto limpio y delimitado como dato, detección de intentos, validación con detectar_conservacion() y caso al coordinador; 0 de 10 ataques exitosos |
 | Notificaciones, ruta, predicción, tablero y constancia | Pospuestas; el coordinador veía métricas básicas | Implementadas (CAR-04, 06, 07, 08 y 12) |
-| Pruebas de calidad | 171 pruebas, 92 %; 20 frases | 376 pruebas, 96 %; 50 frases (100 %) y 10 adversariales (0 exitosas) |
+| Pruebas de calidad | 171 pruebas, 92 %; 20 frases | 379 pruebas, 96 %; 50 frases (100 %) y 10 adversariales (0 exitosas) |
 
 ### 10.3 Patrones de diseño en el código
 
@@ -441,7 +441,7 @@ La entrega final, del 24 de noviembre de 2026, implementa las doce característi
 
 ### 10.4 Verificación
 
-- **Pruebas automatizadas.** 376 pruebas con cliente simulado, incluidas las pantallas con AppTest de Streamlit; cobertura del 96 % e integración continua con GitHub Actions.
+- **Pruebas automatizadas.** 379 pruebas con cliente simulado, incluidas las pantallas con AppTest de Streamlit; cobertura del 96 % e integración continua con GitHub Actions.
 - **Inocuidad.** 51 casos: los 35 no aptos se rechazan y ninguno sale aprobado.
 - **Intérprete.** Con gemma4:e4b, 405 de 405 campos correctos en 50 frases (meta: 90 %) y 0 de 10 manipulaciones exitosas.
 - **Rendimiento.** Frase → asignación: media 124.55 s · p95 224.42 s · máx 237.34 s en un equipo solo con CPU (meta: 60 s; falta medir con GPU). Tablero con un año de datos en 0.015 s, RAG en 0.03 s (p95) y 10 publicaciones simultáneas sin pérdidas.

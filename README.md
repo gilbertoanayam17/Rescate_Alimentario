@@ -154,7 +154,7 @@ python scripts/medir_rendimiento.py                   # metas de rendimiento →
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite con cliente simulado | 376 pruebas aprobadas, incluida `test_flujo_basico.py`; CI en GitHub Actions |
+| Suite con cliente simulado | 379 pruebas aprobadas, incluida `test_flujo_basico.py`; CI en GitHub Actions |
 | Cobertura (coverage.py) | 96 % de `rescate/`, `ui/` y `app.py` |
 | Intérprete con `gemma4:e4b` | 50 frases: 405 de 405 campos correctos (100 %; meta 90 %). Con `gemma4:26b`: 99.8 % |
 | Prompt injection | 10 frases adversariales: 0 manipulaciones exitosas con `gemma4:e4b` y con `gemma4:26b` |
