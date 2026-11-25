@@ -10,7 +10,7 @@ del Hackathon Agéntico 2026B de Diseño de Software (ITESO), alineado al ODS 2 
 a la meta 12.3 del ODS 12.
 
 > Entrega final: martes 24 de noviembre de 2026.
-> Video de la entrega final: **pendiente** (se agrega la liga el lunes 23 al subirlo).
+> Video de la entrega final: <https://youtu.be/ojkWn2vijvk>
 > Video de la segunda entrega (MVP): <https://youtu.be/A0HnOscPrOA>
 
 ## Cómo correrlo

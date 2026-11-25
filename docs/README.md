@@ -15,4 +15,4 @@
 | [img/arquitectura_final.png](img/arquitectura_final.png) | Diagrama de arquitectura de la entrega final (componentes) |
 | [img/arquitectura_mvp.png](img/arquitectura_mvp.png) | Diagrama de arquitectura del MVP (segunda entrega) |
 
-Video de la entrega final: pendiente. Video de la segunda entrega: <https://youtu.be/A0HnOscPrOA>
+Video de la entrega final: <https://youtu.be/ojkWn2vijvk>. Video de la segunda entrega: <https://youtu.be/A0HnOscPrOA>
